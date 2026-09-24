@@ -113,20 +113,23 @@
   .hours .bar { width: 9px; height: 40px; margin: 6px auto; display: flex; align-items: flex-end; border-radius: 5px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
   .hours .bar i { width: 100%; border-radius: 5px; background: var(--rain); }
   .hours .h-pop { color: var(--rain); }
+  .hours .h-wind { margin-top: 6px; font-size: 12px; white-space: nowrap; }
+  .gust { display: block; font-size: 10px; color: #ffe39a; white-space: nowrap; }
 
   .day .d-icon .wx { width: 32px; height: 32px; display: block; }
-  @media (max-width: 480px) {
-    .day { grid-template-columns: 48px 32px minmax(0, 1fr) 76px 46px !important; }
-    .day .d-cond { display: none; }
-  }
-  .day { display: grid; grid-template-columns: 52px 32px minmax(0, 1fr) 40px 76px 46px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 15px; }
-  .day:first-of-type { border-top: 0; padding-top: 0; }
+  .day { display: grid; grid-template-columns: 50px 32px minmax(0, 1fr) 38px 74px 52px 44px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 15px; }
+  .day:first-of-type { border-top: 0; }
   .day .d-cond { font-size: 13px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .day .d-pop { font-size: 13px; color: var(--rain); text-align: right; }
-  .day .d-range, .day .d-total { text-align: right; }
+  .day .d-range, .day .d-wind, .day .d-total { text-align: right; white-space: nowrap; }
   .day .d-range .lo { color: var(--ink-soft); }
-  .day .d-total { font-size: 14px; }
-  .day-key { display: flex; justify-content: flex-end; gap: 8px; font-size: 11px; color: var(--ink-soft); margin: -4px 0 8px; }
+  .day .d-wind, .day .d-total { font-size: 14px; }
+  .day.day-key { padding-block: 0 8px; margin-top: -4px; font-size: 11px; color: var(--ink-soft); }
+  .day.day-key span { font-size: 11px; color: var(--ink-soft); }
+  @media (max-width: 480px) {
+    .day { grid-template-columns: 42px 30px minmax(0, 1fr) 70px 50px 40px; gap: 6px; }
+    .day .d-cond { display: none; }
+  }
 
   .foot { font-size: 12px; color: var(--ink-soft); text-align: center; margin-top: 4px; }
   .foot a { color: inherit; }
