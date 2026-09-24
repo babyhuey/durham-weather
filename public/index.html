@@ -23,6 +23,7 @@
     --rule: rgba(255, 255, 255, 0.2);
     --rain: #d6ecff;
     --veil: 0;
+    --ground: var(--sky-top);
     --display: 'Jost', 'Futura', 'Avenir Next', system-ui, sans-serif;
     --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
     color-scheme: dark;
@@ -36,6 +37,7 @@
       --rule: rgba(255, 255, 255, 0.1);
       --rain: #9fd0ff;
       --veil: 0.62;
+      --ground: #0d1522;
     }
   }
   :root[data-theme="dark"] {
@@ -46,6 +48,7 @@
     --rule: rgba(255, 255, 255, 0.1);
     --rain: #9fd0ff;
     --veil: 0.62;
+    --ground: #0d1522;
   }
   * { box-sizing: border-box; }
   body::after { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: #050a14; opacity: var(--veil); transition: opacity 0.3s ease; }
@@ -54,11 +57,11 @@
   .theme button { font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); background: none; border: 0; border-radius: 999px; padding: 4px 11px; margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
   .theme button[aria-pressed="true"] { color: #10203a; background: rgba(255, 255, 255, 0.88); text-shadow: none; }
   .theme svg { width: 13px; height: 13px; }
-  html { min-height: 100%; background: var(--sky-top); }
+  html { min-height: 100%; background: var(--ground); }
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--sky-top);
+    background: var(--ground);
     color: var(--ink);
     font-family: var(--body);
     font-size: 15px;
