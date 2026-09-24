@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   parseDuration, expandSeries, expandAmounts, buildDays, nextHour, hourStrip,
   currentConditions, nearestStation, sunElevation, skyGradient, skyCoverAt, precipWord,
-  windMph, compass, notableGust,
+  windMph, compass, notableGust, quarterHours, headline,
 } from '../public/weather.js';
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
@@ -137,6 +137,26 @@ test('hourly, next-hour and daily wind come from the real forecast', () => {
   const days = buildDays(grid, periods, TZ, NOW);
   assert.deepEqual([days[0].windDir, days[0].wind, days[0].gust], ['NNE', 13, 25]);
   assert.deepEqual([days[2].windDir, days[2].wind, days[2].gust], ['NNW', 8, null]);
+});
+
+test('quarterHours reads Open-Meteo unixtime data from the current quarter hour', () => {
+  const om = load('open-meteo');
+  const first = om.minutely_15.time[1] * 1000;
+  const q = quarterHours(om, first + 5 * 60000);
+  assert.equal(q.length, 8);
+  assert.equal(q[0].t, first);
+  assert.ok(q.every((x) => typeof x.mm === 'number'));
+});
+
+test('headline prefers radar, then the HRRR model, then weather.gov', () => {
+  const t = Date.parse('2026-09-24T19:00:00Z');
+  const nwsDry = { pop: 5, text: 'Dry for the next 12 hours.' };
+  const nwsWet = { pop: 30, text: 'Rain possible this hour (30%). Drying out by 4 PM.' };
+  const quarters = [0, 0, 0.4, 1].map((mm, i) => ({ t: t + i * 900000, mm }));
+  assert.equal(headline(nwsWet, { rainSoon: true, text: 'Light rain arriving around 3:40 PM.' }, quarters, TZ).source, 'radar');
+  assert.equal(headline(nwsDry, { rainSoon: false }, quarters, TZ).text, 'Dry for now, but the HRRR model shows rain starting around 3:30 PM.');
+  assert.equal(headline(nwsWet, { rainSoon: false }, [], TZ).text, `${nwsWet.text} Nothing on radar headed your way yet.`);
+  assert.equal(headline(nwsDry, null, null, TZ).source, 'weather.gov');
 });
 
 test('precipWord maps forecast text to a short noun', () => {

@@ -55,6 +55,29 @@ function fmt(tz, opts) {
 
 export const localDate = (ms, tz) => fmt(tz, { locale: 'en-CA', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ms);
 export const formatHour = (ms, tz) => fmt(tz, { hour: 'numeric' }).format(ms);
+export const formatClock = (ms, tz) => fmt(tz, { hour: 'numeric', minute: '2-digit' }).format(ms);
+
+// Open-Meteo 15-minute HRRR data (requested with timeformat=unixtime), from the current quarter hour on.
+export function quarterHours(openMeteo, now, count = 8) {
+  const m = openMeteo.minutely_15;
+  const start = m.time.findIndex((t) => t * 1000 + 15 * 60000 > now);
+  if (start === -1) return [];
+  return m.time.slice(start, start + count).map((t, i) => ({
+    t: t * 1000,
+    mm: m.precipitation[start + i] ?? 0,
+  }));
+}
+
+// Radar sees rain that already exists; the HRRR model can see rain that hasn't formed yet.
+export function headline(nws, radar, quarters, tz) {
+  if (radar?.rainSoon) return { text: radar.text, source: 'radar' };
+  const wet = (quarters ?? []).slice(0, 4).find((q) => q.mm >= 0.1);
+  if (nws.pop < 20 && wet) {
+    return { text: `Dry for now, but the HRRR model shows rain starting around ${formatClock(wet.t, tz)}.`, source: 'HRRR model' };
+  }
+  if (nws.pop >= 20 && radar) return { text: `${nws.text} Nothing on radar headed your way yet.`, source: 'weather.gov + radar' };
+  return { text: nws.text, source: 'weather.gov' };
+}
 const weekday = (ms, tz) => fmt(tz, { weekday: 'short' }).format(ms);
 const localHour = (ms, tz) => Number(fmt(tz, { hour: 'numeric', hourCycle: 'h23' }).format(ms));
 

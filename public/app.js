@@ -1,54 +1,14 @@
 import {
   buildDays, nextHour, hourStrip, currentConditions, nearestStation,
-  sunElevation, skyGradient, skyCoverAt,
+  sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock,
 } from './weather.js';
 import { iconSVG, weatherKind, quip } from './icons.js';
+import { HOME, store, esc, HttpError, fetchJSON, getPosition } from './shared.js';
+import { runNowcast } from './radar-data.js';
 
-const HOME = { lat: 36.091, lon: -78.902 };
 const API = 'https://api.weather.gov';
 const REFRESH_MS = 10 * 60000;
 const app = document.getElementById('app');
-
-const store = {
-  get(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } },
-  set(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } },
-};
-
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
-const round3 = (n) => Math.round(n * 1000) / 1000;
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-
-class HttpError extends Error {
-  constructor(status, url) { super(`HTTP ${status} from ${url}`); this.status = status; }
-}
-
-async function fetchJSON(url, attempt = 0) {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
-  try {
-    const res = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/geo+json' } });
-    if (!res.ok) throw new HttpError(res.status, url);
-    return await res.json();
-  } catch (err) {
-    const retryable = !(err instanceof HttpError) || err.status >= 500;
-    if (retryable && attempt === 0) { await wait(1500); return fetchJSON(url, 1); }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function getPosition() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    const timer = setTimeout(() => resolve(null), 5000);
-    navigator.geolocation.getCurrentPosition(
-      (p) => { clearTimeout(timer); resolve({ lat: round3(p.coords.latitude), lon: round3(p.coords.longitude) }); },
-      () => { clearTimeout(timer); resolve(null); },
-      { timeout: 5000, maximumAge: 10 * 60000 },
-    );
-  });
-}
 
 async function getMeta({ lat, lon }) {
   const key = `wx:meta:${lat},${lon}`;
@@ -82,15 +42,22 @@ async function resolveLocation() {
 
 async function buildModel() {
   const { meta, where, note } = await resolveLocation();
-  const [grid, hourly, observation] = await Promise.all([
+  const soft = (p, what) => p.catch((err) => { console.warn(`${what} unavailable`, err); return null; });
+  const [grid, hourly, observation, openMeteo, radar] = await Promise.all([
     fetchJSON(meta.gridUrl),
     fetchJSON(meta.hourlyUrl),
-    fetchJSON(`${API}/stations/${meta.station.id}/observations/latest`).catch(() => null),
+    soft(fetchJSON(`${API}/stations/${meta.station.id}/observations/latest`), 'Station reading'),
+    soft(fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${meta.lat}&longitude=${meta.lon}&minutely_15=precipitation&forecast_minutely_15=12&past_minutely_15=1&timeformat=unixtime&timezone=GMT`), 'Open-Meteo'),
+    soft(runNowcast(meta.lat, meta.lon, (ms) => formatClock(ms, meta.tz)), 'Radar nowcast'),
   ]);
   const now = Date.now();
   const periods = hourly.properties.periods;
   const days = buildDays(grid, periods, meta.tz, now);
+  const quarters = openMeteo ? quarterHours(openMeteo, now) : null;
   const next = nextHour(periods, now, meta.tz, grid);
+  const top = headline(next, radar?.summary, quarters, meta.tz);
+  next.text = top.text;
+  next.source = top.source;
   const current = currentConditions(observation, periods, now);
   const isDay = sunElevation(now, meta.lat, meta.lon) > -0.833;
   return {
@@ -102,6 +69,8 @@ async function buildModel() {
     current,
     today: days[0],
     next,
+    quarters,
+    radarRain: radar?.summary.rainNow ?? false,
     hours: hourStrip(periods, now, meta.tz, 12, grid),
     days,
     cover: skyCoverAt(grid, now),
@@ -113,7 +82,7 @@ function paintSky(m) {
   document.documentElement.style.setProperty('--sky-top', sky.top);
   document.documentElement.style.setProperty('--sky-bottom', sky.bottom);
   document.querySelector('meta[name="theme-color"]').content = sky.top;
-  drizzle(m.next.pop >= 40);
+  drizzle(m.radarRain || m.next.pop >= 40);
 }
 
 const inches = (v) => (v == null ? '—' : `${v.toFixed(2)}″`);
@@ -148,7 +117,19 @@ function render(m, stale) {
       <section class="glass" aria-labelledby="next-h">
         <h2 class="label" id="next-h">Next hour</h2>
         <p class="next-text">${esc(m.next.text)}</p>
+        ${m.quarters?.length && !m.quarters.some((q) => q.mm > 0) ? '<div class="q-caption">HRRR model: no rain in the next 2 hours.</div>' : ''}
+        ${m.quarters?.some((q) => q.mm > 0) ? `
+          <div class="quarters tab" aria-label="Model rain every 15 minutes">
+            ${m.quarters.map((q, i) => `
+              <div class="q">
+                <div class="q-bar"><i style="height:${Math.min(100, (q.mm / 2.5) * 100)}%"></i></div>
+                <div class="q-amt">${q.mm >= 0.25 ? `${(q.mm / 25.4).toFixed(2).replace(/^0/, '')}″` : ''}</div>
+                <div class="q-time">${i === 0 ? 'Now' : esc(formatClock(q.t, m.tz).replace(/ (AM|PM)/, ''))}</div>
+              </div>`).join('')}
+          </div>
+          <div class="q-caption">Rain every 15 min · HRRR model</div>` : ''}
         <div class="next-meta tab"><span>${deg(m.next.tempNow)} → ${deg(m.next.tempNext)}</span><span>Wind ${esc(m.next.wind)}${m.next.gust ? `, gusts ${m.next.gust} mph` : ''}</span></div>
+        <div class="next-foot"><span>Headline: ${esc(m.next.source ?? 'weather.gov')}</span><a href="radar.html">Radar map →</a></div>
       </section>
       <section class="glass" aria-labelledby="hours-h">
         <h2 class="label" id="hours-h">Next 12 hours · chance of rain · wind mph</h2>
@@ -183,7 +164,7 @@ function render(m, stale) {
       </section>
       <p class="foot">
         Updated ${updated} · weather.gov grid ${esc(m.grid)}<br>
-        <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
+        <a href="radar.html">Radar map</a> · <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
       </p>
     </div>`;
   paintSky(m);

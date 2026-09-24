@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Durham Radar</title>
+<meta name="theme-color" content="#0f1622">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%230f1622'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%237ec3ff' stroke-width='2'/%3E%3Cpath d='M16 16 L27 9' stroke='%237ec3ff' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='21' cy='20' r='3' fill='%23f5c451'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #0f1622;
+    --panel: rgba(18, 27, 41, 0.86);
+    --edge: rgba(255, 255, 255, 0.12);
+    --ink: #eef3fa;
+    --ink-soft: rgba(238, 243, 250, 0.68);
+    --radar: #7ec3ff;
+    --forecast: #f5c451;
+    --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; }
+  #map { position: fixed; inset: 0; background: var(--ground); }
+  .bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+    background: linear-gradient(180deg, rgba(15, 22, 34, 0.92), rgba(15, 22, 34, 0));
+  }
+  .bar a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .when { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .chip { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--radar); color: #0f1622; }
+  .chip.forecast { background: var(--forecast); }
+  .panel {
+    position: fixed; left: 50%; transform: translateX(-50%); z-index: 1000;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: min(560px, calc(100% - 32px));
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 18px; padding: 14px 16px;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  }
+  .summary { margin: 0 0 10px; font-size: 16px; line-height: 1.35; text-wrap: pretty; }
+  .controls { display: flex; align-items: center; gap: 12px; }
+  button {
+    font: inherit; font-weight: 600; color: #0f1622; background: var(--ink); border: 0; border-radius: 999px;
+    padding: 6px 14px; cursor: pointer; flex: 0 0 auto;
+  }
+  button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--radar); outline-offset: 2px; }
+  .track { flex: 1; min-width: 0; }
+  input[type=range] { width: 100%; accent-color: var(--radar); }
+  .legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-soft); }
+  .legend .f { color: var(--forecast); }
+  details { margin-top: 10px; font-size: 13px; color: var(--ink-soft); }
+  summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+  .score { display: grid; gap: 4px; margin: 8px 0; font-variant-numeric: tabular-nums; }
+  .score b { color: var(--ink); font-weight: 600; }
+  .fine { margin: 6px 0 0; line-height: 1.45; }
+  .leaflet-container { font-family: var(--body); background: var(--ground); }
+  .leaflet-control-attribution { background: rgba(15, 22, 34, 0.7) !important; color: var(--ink-soft) !important; font-size: 10px; }
+  .leaflet-control-attribution a { color: var(--ink) !important; }
+  .leaflet-top { top: calc(56px + env(safe-area-inset-top, 0px)); }
+  .you { width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(126, 195, 255, 0.55), 0 0 12px rgba(0, 0, 0, 0.6); }
+</style>
+</head>
+<body>
+<div id="map" role="img" aria-label="Radar map"></div>
+<header class="bar">
+  <a href="./">← Forecast</a>
+  <div class="when"><span class="chip" id="chip">Radar</span><span id="time">Loading…</span></div>
+</header>
+<section class="panel" aria-live="polite">
+  <p class="summary" id="summary">Loading radar…</p>
+  <div class="controls">
+    <button type="button" id="play">Pause</button>
+    <div class="track">
+      <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Radar frame">
+      <div class="legend"><span>1 hour ago</span><span>now</span><span class="f">+1 hour forecast</span></div>
+    </div>
+  </div>
+  <details>
+    <summary>How the radar forecast has done</summary>
+    <div class="score" id="score"></div>
+    <p class="fine">The forecast frames slide the newest radar image along the direction the rain moved over the last 15 minutes, the same basic method as the open-source pySTEPS library. It is good at timing rain that already exists and blind to storms that haven't formed yet. Each forecast is checked against the radar once its time arrives; scores are kept on this device only.</p>
+  </details>
+</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<script type="module" src="radar.js"></script>
+</body>
+</html>
