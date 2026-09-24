@@ -41,6 +41,25 @@ export function quip(kind, now = Date.now()) {
   return list[Math.floor(now / 3600000) % list.length];
 }
 
+// Jokes while the air is fine; plain advice once it isn't.
+const AIR_QUIPS = {
+  Good: 'Breathe deep. It is free.',
+  Moderate: 'Fine for most lungs. Sensitive ones, pace yourself.',
+  'Unhealthy for sensitive groups': 'Sensitive lungs should take it easy outside.',
+  Unhealthy: 'Good day for the indoor workout.',
+  'Very unhealthy': 'Stay in and keep the windows closed.',
+  Hazardous: 'Stay indoors. Seriously.',
+};
+const UV_QUIPS = {
+  Low: 'Sunscreen optional. Vampires welcome.',
+  Moderate: "Sunscreen if you're out a while.",
+  High: "Sunscreen o'clock. Hat recommended.",
+  'Very high': 'You will burn fast. Shade, hat, SPF.',
+  Extreme: 'The sun is not playing. Cover up.',
+};
+export const airQuip = (label) => AIR_QUIPS[label] ?? '';
+export const uvQuip = (label, isDay) => (!isDay ? 'The sun is off duty.' : UV_QUIPS[label] ?? '');
+
 // Meters per unit.
 const SILLY_UNITS = [
   ['leagues', 4828.032],

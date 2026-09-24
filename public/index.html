@@ -84,7 +84,7 @@
     html .app {
       max-width: 1240px; gap: 22px 24px;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      grid-template-areas: "now now now" "note note note" "next days days" "radar days days" "hours hours hours" "foot foot foot";
+      grid-template-areas: "now now air" "note note note" "next days days" "radar days days" "hours hours hours" "foot foot foot";
     }
     html .col { display: contents; }
     html .now { grid-area: now; justify-content: flex-start; gap: 64px; }
@@ -94,6 +94,7 @@
     html .area-note { grid-area: note; }
     html .next-card { grid-area: next; }
     html .radar-card { grid-area: radar; }
+    html .air-card { grid-area: air; align-self: center; }
     html .days-card { grid-area: days; }
     html .hours-card { grid-area: hours; }
     html .foot-area { grid-area: foot; }
@@ -175,6 +176,19 @@
   .q-time { color: var(--ink-soft); }
   .q-caption { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
   .next-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .air-card { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .gauge { min-width: 0; }
+  .gauge .label { margin-bottom: 6px; }
+  .g-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .g-num { font-family: var(--display); font-weight: 200; font-size: 44px; line-height: 1; }
+  .g-cat { font-weight: 600; font-size: 12px; line-height: 1.2; color: #10203a; text-shadow: none; padding: 3px 9px; border-radius: 999px; align-self: center; }
+  .meter { position: relative; height: 6px; border-radius: 3px; margin: 10px 0 8px; }
+  .meter.aqi { background: linear-gradient(90deg, #3ec46d 0 16.7%, #f2d34b 16.7% 33.3%, #ff9a3c 33.3% 50%, #ff5a5a 50% 66.7%, #b36bff 66.7% 100%); }
+  .meter.uv { background: linear-gradient(90deg, #3ec46d 0 25%, #f2d34b 25% 50%, #ff9a3c 50% 66.7%, #ff5a5a 66.7% 91.7%, #b36bff 91.7% 100%); }
+  .meter i { position: absolute; top: 50%; width: 12px; height: 12px; margin-left: -6px; transform: translateY(-50%); border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.25); }
+  .g-note { font-size: 12px; color: var(--ink-soft); }
+  .g-quip { font-size: 13px; font-style: italic; margin-top: 4px; text-wrap: pretty; }
   .radar-card { display: block; color: inherit; text-decoration: none; transition: transform 0.15s ease, border-color 0.15s ease; }
   .radar-card:hover { border-color: rgba(255, 255, 255, 0.5); transform: translateY(-1px); }
   .radar-card .label { margin: 0; }

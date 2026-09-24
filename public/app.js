@@ -1,8 +1,8 @@
 import {
   buildDays, nextHour, hourStrip, currentConditions, nearestStation,
-  sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock,
+  sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock, airReport,
 } from './weather.js';
-import { iconSVG, weatherKind, quip, sillyDistance, nextUnit } from './icons.js';
+import { iconSVG, weatherKind, quip, sillyDistance, nextUnit, airQuip, uvQuip } from './icons.js';
 import { HOME, store, esc, HttpError, fetchJSON, getPosition } from './shared.js';
 import { runNowcast } from './radar-data.js';
 import { miniFrames, drawMini } from './radar-mini.js';
@@ -46,12 +46,13 @@ async function resolveLocation() {
 async function buildModel() {
   const { meta, where, note } = await resolveLocation();
   const soft = (p, what) => p.catch((err) => { console.warn(`${what} unavailable`, err); return null; });
-  const [grid, hourly, observation, openMeteo, radar] = await Promise.all([
+  const [grid, hourly, observation, openMeteo, radar, airQuality] = await Promise.all([
     fetchJSON(meta.gridUrl),
     fetchJSON(meta.hourlyUrl),
     soft(fetchJSON(`${API}/stations/${meta.station.id}/observations/latest`), 'Station reading'),
     soft(fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${meta.lat}&longitude=${meta.lon}&minutely_15=precipitation&forecast_minutely_15=12&past_minutely_15=1&timeformat=unixtime&timezone=GMT`), 'Open-Meteo'),
     soft(runNowcast(meta.lat, meta.lon, (ms) => formatClock(ms, meta.tz)), 'Radar nowcast'),
+    soft(fetchJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${meta.lat}&longitude=${meta.lon}&current=us_aqi,us_aqi_pm2_5,us_aqi_pm10,us_aqi_ozone,us_aqi_nitrogen_dioxide,uv_index&hourly=uv_index&forecast_days=2&timeformat=unixtime&timezone=GMT`), 'Air quality'),
   ]);
   const now = Date.now();
   const periods = hourly.properties.periods;
@@ -66,6 +67,8 @@ async function buildModel() {
   const isDay = sunElevation(now, meta.lat, meta.lon) > -0.833;
   return {
     kind: weatherKind(current.text, isDay, current.tempF),
+    isDay,
+    air: airQuality?.current ? airReport(airQuality, now, meta.tz) : null,
     savedAt: now,
     place: meta.city, where, note,
     tz: meta.tz, grid: meta.grid, lat: meta.lat, lon: meta.lon,
@@ -145,6 +148,7 @@ function render(m, stale) {
           <canvas id="rc-canvas" aria-hidden="true"></canvas>
           <div class="rc-foot"><span>Last 15 minutes, then the forecast hour</span><span class="rc-open">Open map →</span></div>
         </a>` : ''}
+      ${m.air ? airCard(m) : ''}
       <section class="glass hours-card" aria-labelledby="hours-h">
         <h2 class="label" id="hours-h">Next 12 hours · chance of rain · wind mph</h2>
         <div class="hours tab" tabindex="0">
@@ -183,6 +187,37 @@ function render(m, stale) {
     </div>`;
   paintSky(m);
   startPreview();
+}
+
+// A meter position along the scale, 0-100%.
+const meterAt = (value, max) => `${Math.min(100, Math.max(0, (value / max) * 100))}%`;
+
+function airCard(m) {
+  const a = m.air;
+  const n = a.uvNext;
+  const at = n ? esc(formatClock(n.at, m.tz).replace(':00', '')) : '';
+  const peak = !n ? 'About as strong as it gets today'
+    : n.when === 'later' ? `Peaks at ${n.uv} around ${at}`
+      : n.when === 'earlier' ? `Peaked at ${n.uv} around ${at}`
+        : `Tomorrow: peaks at ${n.uv} around ${at}`;
+  return `
+    <section class="glass air-card" aria-labelledby="air-h">
+      <h2 class="visually-hidden" id="air-h">Air quality and UV</h2>
+      <div class="gauge">
+        <div class="label">Air quality</div>
+        <div class="g-row"><span class="g-num tab">${a.aqi}</span><span class="g-cat" style="background:${a.aqiBand.color}">${esc(a.aqiBand.label)}</span></div>
+        <div class="meter aqi"><i style="left:${meterAt(a.aqi, 300)}"></i></div>
+        <div class="g-note">Mostly ${esc(a.driver)}</div>
+        <div class="g-quip">${esc(airQuip(a.aqiBand.label))}</div>
+      </div>
+      <div class="gauge">
+        <div class="label">UV index</div>
+        <div class="g-row"><span class="g-num tab">${a.uv}</span><span class="g-cat" style="background:${a.uvBand.color}">${esc(a.uvBand.label)}</span></div>
+        <div class="meter uv"><i style="left:${meterAt(a.uv, 12)}"></i></div>
+        <div class="g-note">${peak}</div>
+        <div class="g-quip">${esc(uvQuip(a.uvBand.label, m.isDay ?? true))}</div>
+      </div>
+    </section>`;
 }
 
 function startPreview() {
