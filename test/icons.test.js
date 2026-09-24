@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { weatherKind, iconSVG, quip, KINDS } from '../public/icons.js';
+import { weatherKind, iconSVG, quip, KINDS, sillyDistance } from '../public/icons.js';
 
 test('weatherKind maps weather.gov wording to a character', () => {
   const cases = [
@@ -38,6 +38,21 @@ test('iconSVG renders every character, animated only as the hero', () => {
     assert.match(iconSVG(kind), /class="wx wx-static"/);
     assert.ok(!hero.includes('undefined') && !hero.includes('NaN'), kind);
   }
+});
+
+test('sillyDistance rotates units every 10 minutes and keeps real miles', () => {
+  const km = 22.8;
+  const slot = 600000;
+  const texts = new Set();
+  for (let i = 0; i < 20; i++) {
+    const d = sillyDistance(km, i * slot);
+    assert.equal(d.miles, '14 mi');
+    texts.add(d.text);
+  }
+  assert.equal(texts.size, 20);
+  assert.equal(sillyDistance(km, 0).text, '4.72 leagues');
+  assert.equal(sillyDistance(km, slot).text, '1.9 million honeybees');
+  assert.equal(sillyDistance(km, 0).text, sillyDistance(km, slot - 1).text);
 });
 
 test('quip is stable within an hour', () => {

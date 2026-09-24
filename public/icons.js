@@ -41,6 +41,42 @@ export function quip(kind, now = Date.now()) {
   return list[Math.floor(now / 3600000) % list.length];
 }
 
+// Meters per unit.
+const SILLY_UNITS = [
+  ['leagues', 4828.032],
+  ['honeybees', 0.012],
+  ['football fields', 91.44],
+  ['furlongs', 201.168],
+  ['smoots', 1.7018],
+  ['school buses', 13.7],
+  ['bananas', 0.18],
+  ['giraffes', 5.5],
+  ['blue whales', 25],
+  ['Eiffel Towers', 330],
+  ['hot dogs', 0.15],
+  ['marathons', 42195],
+  ['corgis', 0.6],
+  ['light-microseconds', 299.792458],
+  ['chains', 20.1168],
+  ['attoparsecs', 0.0308568],
+  ['Great Pyramids', 138.5],
+  ['Cheerwine cans', 0.122],
+  ['Durham Bulls fields (home to center)', 125],
+  ['sticks of butter', 0.12],
+];
+
+function roughly(n) {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)} billion`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)} million`;
+  return n.toLocaleString('en-US', { maximumSignificantDigits: 3 });
+}
+
+// A different ridiculous unit every 10 minutes, always paired with real miles.
+export function sillyDistance(km, now = Date.now()) {
+  const [unit, meters] = SILLY_UNITS[Math.floor(now / 600000) % SILLY_UNITS.length];
+  return { text: `${roughly((km * 1000) / meters)} ${unit}`, miles: `${Math.round(km / 1.609344)} mi` };
+}
+
 const INK = '#23304a';
 
 function face(x, y, type, s = 1, ink = INK) {
