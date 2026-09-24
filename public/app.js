@@ -5,13 +5,12 @@ import {
 import { iconSVG, weatherKind, quip, sillyDistance, nextUnit, airQuip, uvQuip } from './icons.js';
 import { HOME, store, esc, HttpError, fetchJSON, getPosition } from './shared.js';
 import { runNowcast } from './radar-data.js';
-import { miniFrames, drawMini } from './radar-mini.js';
+import { miniSnapshot, drawMini } from './radar-mini.js';
 
 const API = 'https://api.weather.gov';
 const REFRESH_MS = 10 * 60000;
 const app = document.getElementById('app');
 let preview = null;
-let previewTimer = null;
 
 async function getMeta({ lat, lon }) {
   const key = `wx:meta:${lat},${lon}`;
@@ -62,7 +61,7 @@ async function buildModel() {
   const top = headline(next, radar?.summary, quarters, meta.tz);
   next.text = top.text;
   next.source = top.source;
-  preview = radar ? { frames: miniFrames(radar), kmPerPx: radar.kmPerPx, tz: meta.tz } : null;
+  preview = radar ? { frame: miniSnapshot(radar), kmPerPx: radar.kmPerPx, tz: meta.tz } : null;
   const current = currentConditions(observation, periods, now);
   const isDay = sunElevation(now, meta.lat, meta.lon) > -0.833;
   return {
@@ -144,9 +143,9 @@ function render(m, stale) {
       </section>
       ${preview ? `
         <a class="glass radar-card" href="radar" aria-label="Open the radar map">
-          <div class="rc-head"><h2 class="label">Radar</h2><span class="rc-when tab" id="rc-when">Now</span></div>
+          <div class="rc-head"><h2 class="label">Radar</h2><span class="rc-when tab">${esc(formatClock(preview.frame.ms, preview.tz))}</span></div>
           <canvas id="rc-canvas" aria-hidden="true"></canvas>
-          <div class="rc-foot"><span>Last 15 minutes, then the forecast hour</span><span class="rc-open">Open map →</span></div>
+          <div class="rc-foot"><span>Latest scan · the map has the loop and forecast</span><span class="rc-open">Open map →</span></div>
         </a>` : ''}
       ${m.air ? airCard(m) : ''}
       <section class="glass hours-card" aria-labelledby="hours-h">
@@ -186,7 +185,7 @@ function render(m, stale) {
       </p>
     </div>`;
   paintSky(m);
-  startPreview();
+  drawPreview();
 }
 
 // A meter position along the scale, 0-100%.
@@ -220,31 +219,9 @@ function airCard(m) {
     </section>`;
 }
 
-function startPreview() {
-  clearInterval(previewTimer);
+function drawPreview() {
   const canvas = document.getElementById('rc-canvas');
-  if (!preview || !canvas) return;
-  const { frames, kmPerPx, tz } = preview;
-  const nowIndex = frames.findIndex((f) => f.forecast) - 1;
-  const label = document.getElementById('rc-when');
-  const show = (i) => {
-    const f = frames[i];
-    drawMini(canvas, f, kmPerPx);
-    const mins = Math.round((f.ms - frames[nowIndex >= 0 ? nowIndex : frames.length - 1].ms) / 60000);
-    label.textContent = mins === 0 ? 'Now' : mins < 0 ? `${-mins} min ago` : `Forecast +${mins} min`;
-    label.classList.toggle('forecast', f.forecast);
-    label.title = formatClock(f.ms, tz);
-  };
-  const rest = nowIndex >= 0 ? nowIndex : frames.length - 1;
-  show(rest);
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || frames.length < 2) return;
-  let i = rest, hold = 0;
-  previewTimer = setInterval(() => {
-    if ((i === rest || i === frames.length - 1) && hold++ < 3) return;
-    hold = 0;
-    i = (i + 1) % frames.length;
-    show(i);
-  }, 450);
+  if (preview && canvas) drawMini(canvas, preview.frame, preview.kmPerPx);
 }
 
 function renderError() {

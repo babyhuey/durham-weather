@@ -1,11 +1,10 @@
-import { advect, dbzToRgb, STEP_MIN } from './nowcast.js';
+import { dbzToRgb } from './nowcast.js';
 
 const CROP_W = 128;
 const CROP_H = 72;
 const SCALE = 3;
 const RING_MI = 25;
 const MIN_DBZ = 10;
-const STEP_MS = STEP_MIN * 60000;
 
 function crop(grid, w, cx, cy) {
   const img = new ImageData(CROP_W, CROP_H);
@@ -20,18 +19,10 @@ function crop(grid, w, cx, cy) {
   return img;
 }
 
-// Last 15 minutes of real radar, then the forecast hour, cropped to ~160 x 90 miles around the point.
-export function miniFrames(nowcast) {
-  const { grids, w, h, px, py, motion, validMs } = nowcast;
-  const frames = grids.slice().reverse().map((g, i) => ({
-    ms: validMs - (grids.length - 1 - i) * STEP_MS, forecast: false, image: crop(g, w, px, py),
-  }));
-  if (motion) {
-    for (let k = 1; k <= 12; k++) {
-      frames.push({ ms: validMs + k * STEP_MS, forecast: true, image: crop(advect(grids[0], w, h, motion, k), w, px, py) });
-    }
-  }
-  return frames;
+// The latest radar scan, cropped to ~160 x 90 miles around the point.
+export function miniSnapshot(nowcast) {
+  const { grid, w, px, py, validMs } = nowcast;
+  return { ms: validMs, image: crop(grid, w, px, py) };
 }
 
 export function drawMini(canvas, frame, kmPerPx) {
