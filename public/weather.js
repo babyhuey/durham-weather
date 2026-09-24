@@ -69,6 +69,8 @@ export function hourStrip(periods, now, tz, count = 12) {
     label: k === 0 ? 'Now' : formatHour(Date.parse(p.startTime), tz).replace(' AM', 'a').replace(' PM', 'p'),
     temp: p.temperature,
     pop: pop(p),
+    text: p.shortForecast,
+    isDay: p.isDaytime,
   }));
 }
 
