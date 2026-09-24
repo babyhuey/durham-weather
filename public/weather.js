@@ -1,7 +1,18 @@
 const HOUR = 3600000;
 const RAD = Math.PI / 180;
+const KMH_TO_MPH = 0.621371;
 
 export const cToF = (c) => (c == null ? null : Math.round((c * 9) / 5 + 32));
+const kmhToMph = (v) => (v == null ? null : Math.round(v * KMH_TO_MPH));
+
+// Hourly wind arrives as text like "13 mph" or "10 to 15 mph"; keep the top of the range.
+export const windMph = (text) => Math.max(0, ...(String(text).match(/\d+/g) ?? []).map(Number));
+
+const POINTS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+export const compass = (deg) => (deg == null ? '' : POINTS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16]);
+
+// Gusts only earn a mention when they are both strong and well above the steady wind.
+export const notableGust = (gust, speed) => (gust != null && gust >= 20 && gust >= speed + 5 ? gust : null);
 
 export function parseDuration(iso) {
   const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(iso);
@@ -63,9 +74,17 @@ function currentIndex(periods, now) {
   return i === -1 ? 0 : i;
 }
 
-export function hourStrip(periods, now, tz, count = 12) {
+function gustsMph(grid) {
+  return grid ? expandSeries(grid.properties.windGust.values) : new Map();
+}
+
+export function hourStrip(periods, now, tz, count = 12, grid = null) {
   const i = currentIndex(periods, now);
+  const gusts = gustsMph(grid);
   return periods.slice(i, i + count).map((p, k) => ({
+    wind: windMph(p.windSpeed),
+    windDir: p.windDirection,
+    gust: notableGust(kmhToMph(gusts.get(Date.parse(p.startTime))), windMph(p.windSpeed)),
     label: k === 0 ? 'Now' : formatHour(Date.parse(p.startTime), tz).replace(' AM', 'a').replace(' PM', 'p'),
     temp: p.temperature,
     pop: pop(p),
@@ -74,7 +93,7 @@ export function hourStrip(periods, now, tz, count = 12) {
   }));
 }
 
-export function nextHour(periods, now, tz) {
+export function nextHour(periods, now, tz, grid = null) {
   const i = currentIndex(periods, now);
   const window = periods.slice(i, i + 12);
   const [first, second] = window;
@@ -99,6 +118,7 @@ export function nextHour(periods, now, tz) {
     tempNow: first.temperature,
     tempNext: second?.temperature ?? null,
     wind: `${first.windDirection} ${first.windSpeed}`,
+    gust: notableGust(kmhToMph(gustsMph(grid).get(Date.parse(first.startTime))), windMph(first.windSpeed)),
   };
 }
 
@@ -139,8 +159,24 @@ export function buildDays(grid, periods, tz, now, count = 7) {
     mmByDay.set(key, (mmByDay.get(key) ?? 0) + mm);
   }
 
+  const windByDay = new Map();
+  const dirs = expandSeries(g.windDirection.values);
+  const gusts = expandSeries(g.windGust.values);
+  for (const [t, kmh] of expandSeries(g.windSpeed.values)) {
+    const key = localDate(t, tz);
+    const day = windByDay.get(key) ?? { speed: -1, dir: null, gust: null };
+    if ((kmh ?? 0) > day.speed) Object.assign(day, { speed: kmh ?? 0, dir: dirs.get(t) ?? null });
+    windByDay.set(key, day);
+  }
+  for (const [t, kmh] of gusts) {
+    const day = windByDay.get(localDate(t, tz));
+    if (day && kmh != null) day.gust = Math.max(day.gust ?? 0, kmh);
+  }
+
   return keys.map((key, n) => {
     const { start, end } = bounds.get(key);
+    const w = windByDay.get(key);
+    const wind = w ? kmhToMph(w.speed) : null;
     const covered = qpfStart <= start && qpfEnd >= end;
     const dayPeriods = periods.filter((p) => localDate(Date.parse(p.startTime), tz) === key);
     const dayPop = popByDay.get(key) ?? Math.max(0, ...dayPeriods.map(pop));
@@ -152,6 +188,9 @@ export function buildDays(grid, periods, tz, now, count = 7) {
       pop: dayPop,
       precipIn: covered ? (mmByDay.get(key) ?? 0) / 25.4 : null,
       condition: dayCondition(dayPeriods, tz),
+      wind,
+      windDir: w ? compass(w.dir) : '',
+      gust: w ? notableGust(kmhToMph(w.gust), wind) : null,
     };
   });
 }

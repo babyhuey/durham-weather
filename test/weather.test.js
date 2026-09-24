@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   parseDuration, expandSeries, expandAmounts, buildDays, nextHour, hourStrip,
   currentConditions, nearestStation, sunElevation, skyGradient, skyCoverAt, precipWord,
+  windMph, compass, notableGust,
 } from '../public/weather.js';
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
@@ -117,6 +118,25 @@ test('skyGradient moves from clear blue to overcast grey to night', () => {
   assert.equal(skyGradient(-30, 0).top, '#0a1430');
   assert.equal(skyGradient(-30, 0).night, true);
   assert.ok(skyCoverAt(grid, NOW) > 50);
+});
+
+test('wind helpers parse speeds, compass points and notable gusts', () => {
+  assert.equal(windMph('13 mph'), 13);
+  assert.equal(windMph('10 to 15 mph'), 15);
+  assert.equal(windMph(''), 0);
+  assert.deepEqual([0, 20, 180, 337, 355].map(compass), ['N', 'NNE', 'S', 'NNW', 'N']);
+  assert.equal(notableGust(24, 13), 24);
+  assert.equal(notableGust(17, 5), null);
+  assert.equal(notableGust(22, 20), null);
+});
+
+test('hourly, next-hour and daily wind come from the real forecast', () => {
+  const h = hourStrip(periods, NOW, TZ, 12, grid);
+  assert.deepEqual([h[0].windDir, h[0].wind, h[0].gust], ['N', 13, 24]);
+  assert.equal(nextHour(periods, NOW, TZ, grid).gust, 24);
+  const days = buildDays(grid, periods, TZ, NOW);
+  assert.deepEqual([days[0].windDir, days[0].wind, days[0].gust], ['NNE', 13, 25]);
+  assert.deepEqual([days[2].windDir, days[2].wind, days[2].gust], ['NNW', 8, null]);
 });
 
 test('precipWord maps forecast text to a short noun', () => {

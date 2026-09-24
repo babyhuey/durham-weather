@@ -90,7 +90,7 @@ async function buildModel() {
   const now = Date.now();
   const periods = hourly.properties.periods;
   const days = buildDays(grid, periods, meta.tz, now);
-  const next = nextHour(periods, now, meta.tz);
+  const next = nextHour(periods, now, meta.tz, grid);
   const current = currentConditions(observation, periods, now);
   const isDay = sunElevation(now, meta.lat, meta.lon) > -0.833;
   return {
@@ -102,7 +102,7 @@ async function buildModel() {
     current,
     today: days[0],
     next,
-    hours: hourStrip(periods, now, meta.tz),
+    hours: hourStrip(periods, now, meta.tz, 12, grid),
     days,
     cover: skyCoverAt(grid, now),
   };
@@ -148,10 +148,10 @@ function render(m, stale) {
       <section class="glass" aria-labelledby="next-h">
         <h2 class="label" id="next-h">Next hour</h2>
         <p class="next-text">${esc(m.next.text)}</p>
-        <div class="next-meta tab"><span>${deg(m.next.tempNow)} → ${deg(m.next.tempNext)}</span><span>Wind ${esc(m.next.wind)}</span></div>
+        <div class="next-meta tab"><span>${deg(m.next.tempNow)} → ${deg(m.next.tempNext)}</span><span>Wind ${esc(m.next.wind)}${m.next.gust ? `, gusts ${m.next.gust} mph` : ''}</span></div>
       </section>
       <section class="glass" aria-labelledby="hours-h">
-        <h2 class="label" id="hours-h">Next 12 hours · chance of rain</h2>
+        <h2 class="label" id="hours-h">Next 12 hours · chance of rain · wind mph</h2>
         <div class="hours tab" tabindex="0">
           ${m.hours.map((h) => `
             <div>
@@ -160,6 +160,8 @@ function render(m, stale) {
               <div class="bar"><i style="height:${Math.max(Number(h.pop) || 0, 3)}%"></i></div>
               <div class="h-temp">${deg(h.temp)}</div>
               <div class="h-pop">${h.pop}%</div>
+              ${h.wind == null ? '' : `<div class="h-wind">${esc(h.windDir)} ${h.wind}</div>`}
+              ${h.gust ? `<div class="gust">gust ${h.gust}</div>` : ''}
             </div>`).join('')}
         </div>
       </section>
@@ -167,14 +169,15 @@ function render(m, stale) {
     <div class="col">
       <section class="glass tab" aria-labelledby="days-h">
         <h2 class="label" id="days-h">7 days</h2>
-        <div class="day-key"><span>chance</span><span style="width:76px;text-align:right">low – high</span><span style="width:46px;text-align:right">total</span></div>
+        <div class="day day-key"><span></span><span></span><span class="d-cond"></span><span class="d-pop">chance</span><span class="d-range">low – high</span><span class="d-wind">wind</span><span class="d-total">total</span></div>
         ${m.days.map((d) => `
           <div class="day">
             <span>${esc(d.label)}</span>
             <span class="d-icon">${iconSVG(weatherKind(d.condition, true, d.high), { label: d.condition })}</span>
-            <span class="d-cond">${esc(d.condition)}</span>
+            <span class="d-cond" title="${esc(d.condition)}">${esc(d.condition)}</span>
             <span class="d-pop">${d.pop}%</span>
             <span class="d-range"><span class="lo">${deg(d.low)}</span> – ${deg(d.high)}</span>
+            <span class="d-wind">${d.wind == null ? '—' : `${esc(d.windDir)} ${d.wind}`}${d.gust ? `<span class="gust">gust ${d.gust}</span>` : ''}</span>
             <span class="d-total">${inches(d.precipIn)}</span>
           </div>`).join('')}
       </section>
