@@ -129,7 +129,7 @@ function render(m, stale) {
           </div>
           <div class="q-caption">Rain every 15 min · HRRR model</div>` : ''}
         <div class="next-meta tab"><span>${deg(m.next.tempNow)} → ${deg(m.next.tempNext)}</span><span>Wind ${esc(m.next.wind)}${m.next.gust ? `, gusts ${m.next.gust} mph` : ''}</span></div>
-        <div class="next-foot"><span>Headline: ${esc(m.next.source ?? 'weather.gov')}</span><a href="radar.html">Radar map →</a></div>
+        <div class="next-foot"><span>Headline: ${esc(m.next.source ?? 'weather.gov')}</span><a href="radar">Radar map →</a></div>
       </section>
       <section class="glass" aria-labelledby="hours-h">
         <h2 class="label" id="hours-h">Next 12 hours · chance of rain · wind mph</h2>
@@ -164,7 +164,7 @@ function render(m, stale) {
       </section>
       <p class="foot">
         Updated ${updated} · weather.gov grid ${esc(m.grid)}<br>
-        <a href="radar.html">Radar map</a> · <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
+        <a href="radar">Radar map</a> · <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
       </p>
     </div>`;
   paintSky(m);
