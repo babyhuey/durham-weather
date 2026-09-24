@@ -1,0 +1,10 @@
+{
+  "name": "durham-weather",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "npx --yes serve public",
+    "deploy": "npx --yes wrangler pages deploy public --project-name durham-weather"
+  }
+}
