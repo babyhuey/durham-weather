@@ -2,6 +2,7 @@ import {
   buildDays, nextHour, hourStrip, currentConditions, nearestStation,
   sunElevation, skyGradient, skyCoverAt,
 } from './weather.js';
+import { iconSVG, weatherKind, quip } from './icons.js';
 
 const HOME = { lat: 36.091, lon: -78.902 };
 const API = 'https://api.weather.gov';
@@ -90,12 +91,15 @@ async function buildModel() {
   const periods = hourly.properties.periods;
   const days = buildDays(grid, periods, meta.tz, now);
   const next = nextHour(periods, now, meta.tz);
+  const current = currentConditions(observation, periods, now);
+  const isDay = sunElevation(now, meta.lat, meta.lon) > -0.833;
   return {
+    kind: weatherKind(current.text, isDay, current.tempF),
     savedAt: now,
     place: meta.city, where, note,
     tz: meta.tz, grid: meta.grid, lat: meta.lat, lon: meta.lon,
     station: meta.station,
-    current: currentConditions(observation, periods, now),
+    current,
     today: days[0],
     next,
     hours: hourStrip(periods, now, meta.tz),
@@ -124,13 +128,20 @@ function render(m, stale) {
     m.note,
     stale && `Showing ${updated} data. weather.gov isn't responding right now.`,
   ].filter(Boolean);
+  const nowKind = m.kind ?? weatherKind(m.current.text, true, m.current.tempF);
 
   app.innerHTML = `
     <section class="now">
-      <div class="place">${esc(m.place)} <small>· ${esc(m.where)}</small></div>
-      <div class="temp tab">${deg(m.current.tempF)}</div>
-      <div class="cond tab">${esc(m.current.text)} · H ${deg(m.today.high)} L ${deg(m.today.low)}</div>
-      <div class="source">${source}</div>
+      <div class="now-text">
+        <div class="place">${esc(m.place)} <small>· ${esc(m.where)}</small></div>
+        <div class="temp tab">${deg(m.current.tempF)}</div>
+        <div class="cond tab">${esc(m.current.text)} · H ${deg(m.today.high)} L ${deg(m.today.low)}</div>
+        <div class="source">${source}</div>
+      </div>
+      <figure class="hero">
+        ${iconSVG(nowKind, { hero: true, label: m.current.text })}
+        <figcaption class="quip">${esc(quip(nowKind))}</figcaption>
+      </figure>
     </section>
     <div class="col">
       ${notices.map((n) => `<div class="notice">${esc(n)}</div>`).join('')}
@@ -145,6 +156,7 @@ function render(m, stale) {
           ${m.hours.map((h) => `
             <div>
               <div>${esc(h.label)}</div>
+              <div class="h-icon">${iconSVG(weatherKind(h.text, h.isDay ?? true, h.temp), { label: h.text })}</div>
               <div class="bar"><i style="height:${Math.max(Number(h.pop) || 0, 3)}%"></i></div>
               <div class="h-temp">${deg(h.temp)}</div>
               <div class="h-pop">${h.pop}%</div>
@@ -159,6 +171,7 @@ function render(m, stale) {
         ${m.days.map((d) => `
           <div class="day">
             <span>${esc(d.label)}</span>
+            <span class="d-icon">${iconSVG(weatherKind(d.condition, true, d.high), { label: d.condition })}</span>
             <span class="d-cond">${esc(d.condition)}</span>
             <span class="d-pop">${d.pop}%</span>
             <span class="d-range"><span class="lo">${deg(d.low)}</span> – ${deg(d.high)}</span>
