@@ -42,6 +42,15 @@ weather.gov has no minute-level nowcast; "next hour" is built from hourly data.
 
 Phone-first, single column: Now → Next hour → Next 12 hours (chance-of-rain bars) → 7 days → footer (updated time, grid, link to forecast.weather.gov). Two columns at ≥ 820 px. Animated drizzle when the current hour's chance of precip is ≥ 40%, disabled under `prefers-reduced-motion`.
 
+## Additions (2026-09-24)
+
+- **Weather characters** (`icons.js`): inline animated SVG per forecast type, mapped from weather.gov wording, with an hourly quip.
+- **Wind**: hourly direction/speed, daily max sustained wind and direction; gusts shown when ≥ 20 mph and ≥ 5 mph above the steady wind.
+- **Open-Meteo 15-minute precipitation** (HRRR, `timeformat=unixtime`) in the Next hour card.
+- **Radar nowcast** (`nowcast.js`, `radar-data.js`): IEM N0Q composite tiles for exact timestamps (`ridge::USCOMP-N0Q-YYYYMMDDHHMM`), 2×2 tiles at zoom 7, decoded to dBZ via the published palette, max-pooled 2×. One motion vector from cross-correlating frame pairs (10 and 15 minutes apart), then the newest frame is advected in 5-minute steps; rain at the point = ≥ 20 dBZ within ~2 km. This is the constant-vector extrapolation baseline used by pySTEPS/rainymotion; it cannot forecast new storms.
+- **Headline priority**: radar (rain now or arriving within the hour) → HRRR 15-minute model (weather.gov dry but model wet) → weather.gov hourly chance.
+- **Radar page** (`radar.html`, `radar.js`): Leaflet 1.9.4 (cdnjs, SRI), Esri dark gray basemap, 13 past frames + 12 forecast frames, scrubber, and a per-device accuracy scorecard (forecasts at +15/+30/+60 minutes checked against later radar frames, kept in `localStorage` for 7 days).
+
 ## Files and testing
 
 - `index.html`, `app.js` (fetch + render), `weather.js` (pure derivations).

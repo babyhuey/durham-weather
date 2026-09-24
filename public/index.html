@@ -107,6 +107,14 @@
   .next-text { font-size: 19px; line-height: 1.35; margin: 0; text-wrap: pretty; }
   .next-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 14px; color: var(--ink-soft); }
 
+  .quarters { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; margin-top: 14px; text-align: center; font-size: 11px; }
+  .q-bar { height: 30px; display: flex; align-items: flex-end; border-radius: 4px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+  .q-bar i { width: 100%; background: var(--rain); border-radius: 4px; }
+  .q-amt { height: 14px; color: var(--rain); font-size: 10px; }
+  .q-time { color: var(--ink-soft); }
+  .q-caption { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .next-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+  .next-foot a { color: var(--ink); font-weight: 600; }
   .hours { display: grid; grid-auto-flow: column; grid-auto-columns: 46px; gap: 4px; overflow-x: auto; text-align: center; font-size: 12px; padding-bottom: 6px; scrollbar-width: thin; }
   .hours .h-temp { font-size: 15px; font-weight: 500; }
   .hours .h-icon .wx { width: 34px; height: 34px; margin-top: 4px; }
