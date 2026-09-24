@@ -2,7 +2,7 @@ import {
   buildDays, nextHour, hourStrip, currentConditions, nearestStation,
   sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock,
 } from './weather.js';
-import { iconSVG, weatherKind, quip } from './icons.js';
+import { iconSVG, weatherKind, quip, sillyDistance } from './icons.js';
 import { HOME, store, esc, HttpError, fetchJSON, getPosition } from './shared.js';
 import { runNowcast } from './radar-data.js';
 
@@ -90,8 +90,9 @@ const deg = (v) => (v == null ? '--' : `${v}°`);
 
 function render(m, stale) {
   const updated = new Date(m.savedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: m.tz });
+  const far = sillyDistance(m.station.km, m.savedAt);
   const source = m.current.source === 'station'
-    ? `Measured at ${esc(m.station.name.split(',')[0])} · ${Math.round(m.station.km)} km away`
+    ? `Measured at ${esc(m.station.name.split(',')[0])} · ${esc(far.text)} away (${far.miles})`
     : 'Forecast for this hour (no recent station reading)';
   const notices = [
     m.note,
