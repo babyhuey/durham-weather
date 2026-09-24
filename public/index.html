@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Durham Weather</title>
+<meta name="theme-color" content="#56697f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='13' r='7' fill='%23f5c451'/%3E%3Cpath d='M9 26a6 6 0 0 1 1-11.9A7 7 0 0 1 23.4 16 5 5 0 0 1 23 26z' fill='%23dfe7f1'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;400;500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --sky-top: #56697f;
+    --sky-bottom: #aebacb;
+    --ink: #ffffff;
+    --ink-soft: rgba(255, 255, 255, 0.78);
+    --glass: rgba(255, 255, 255, 0.16);
+    --glass-edge: rgba(255, 255, 255, 0.24);
+    --rule: rgba(255, 255, 255, 0.2);
+    --rain: #d6ecff;
+    --display: 'Jost', 'Futura', 'Avenir Next', system-ui, sans-serif;
+    --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { min-height: 100%; background: var(--sky-top); }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--sky-top);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.4;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    padding-inline: max(16px, env(safe-area-inset-left, 0px));
+    padding-block: calc(28px + env(safe-area-inset-top, 0px)) calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  body::before { content: ''; position: fixed; inset: 0; z-index: 0; background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%); }
+  #drizzle { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  .app { position: relative; z-index: 1; max-width: 440px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
+  @media (min-width: 820px) {
+    .app { max-width: 960px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+    .now { grid-column: 1 / -1; }
+  }
+  .tab { font-variant-numeric: tabular-nums; }
+
+  .now { padding-block: 4px 6px; }
+  .place { font-size: 16px; font-weight: 500; }
+  .place small { font-weight: 400; color: var(--ink-soft); font-size: 14px; }
+  .temp { font-family: var(--display); font-weight: 200; font-size: clamp(88px, 26vw, 128px); line-height: 0.95; letter-spacing: -0.04em; margin: 4px 0 2px; }
+  .cond { font-size: 16px; color: var(--ink-soft); }
+  .source { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+
+  .glass {
+    background: var(--glass);
+    border: 1px solid var(--glass-edge);
+    border-radius: 20px;
+    padding: 16px;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 10px; }
+
+  .next-text { font-size: 19px; line-height: 1.35; margin: 0; text-wrap: pretty; }
+  .next-meta { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 10px; font-size: 14px; color: var(--ink-soft); }
+
+  .hours { display: grid; grid-auto-flow: column; grid-auto-columns: 46px; gap: 4px; overflow-x: auto; text-align: center; font-size: 12px; padding-bottom: 6px; scrollbar-width: thin; }
+  .hours .h-temp { font-size: 15px; font-weight: 500; }
+  .hours .bar { width: 9px; height: 40px; margin: 6px auto; display: flex; align-items: flex-end; border-radius: 5px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+  .hours .bar i { width: 100%; border-radius: 5px; background: var(--rain); }
+  .hours .h-pop { color: var(--rain); }
+
+  .day { display: grid; grid-template-columns: 52px minmax(0, 1fr) 40px 76px 46px; gap: 8px; align-items: center; padding: 9px 0; border-top: 1px solid var(--rule); font-size: 15px; }
+  .day:first-of-type { border-top: 0; padding-top: 0; }
+  .day .d-cond { font-size: 13px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .day .d-pop { font-size: 13px; color: var(--rain); text-align: right; }
+  .day .d-range, .day .d-total { text-align: right; }
+  .day .d-range .lo { color: var(--ink-soft); }
+  .day .d-total { font-size: 14px; }
+  .day-key { display: flex; justify-content: flex-end; gap: 8px; font-size: 11px; color: var(--ink-soft); margin: -4px 0 8px; }
+
+  .foot { font-size: 12px; color: var(--ink-soft); text-align: center; margin-top: 4px; }
+  .foot a { color: inherit; }
+  .notice { font-size: 13px; background: rgba(0, 0, 0, 0.18); border-radius: 12px; padding: 10px 12px; }
+  .notice[hidden] { display: none; }
+  .error { text-align: center; padding: 28px 16px; }
+  button {
+    font: inherit; font-weight: 600; color: var(--ink); background: var(--glass); border: 1px solid var(--glass-edge);
+    border-radius: 999px; padding: 8px 18px; margin-top: 12px; cursor: pointer;
+  }
+  button:focus-visible, a:focus-visible, .hours:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .loading { color: var(--ink-soft); }
+</style>
+</head>
+<body>
+<canvas id="drizzle" aria-hidden="true"></canvas>
+<main class="app" id="app" aria-live="polite">
+  <section class="now">
+    <div class="place">Durham</div>
+    <div class="temp tab">--°</div>
+    <div class="cond loading">Loading forecast…</div>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
