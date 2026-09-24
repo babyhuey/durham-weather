@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   parseDuration, expandSeries, expandAmounts, buildDays, nextHour, hourStrip,
   currentConditions, nearestStation, sunElevation, skyGradient, skyCoverAt, precipWord,
-  windMph, compass, notableGust, quarterHours, headline,
+  windMph, compass, notableGust, quarterHours, headline, airReport, aqiBand, uvBand,
 } from '../public/weather.js';
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
@@ -157,6 +157,34 @@ test('headline prefers radar, then the HRRR model, then weather.gov', () => {
   assert.equal(headline(nwsDry, { rainSoon: false }, quarters, TZ).text, 'Dry for now, but the HRRR model shows rain starting around 3:30 PM.');
   assert.equal(headline(nwsWet, { rainSoon: false }, [], TZ).text, `${nwsWet.text} Nothing on radar headed your way yet.`);
   assert.equal(headline(nwsDry, null, null, TZ).source, 'weather.gov');
+});
+
+test('airReport reads AQI, its main pollutant and today\'s UV peak', () => {
+  const aq = load('air-quality');
+  const now = aq.current.time * 1000;
+  const r = airReport(aq, now, TZ);
+  assert.equal(r.aqi, 32);
+  assert.deepEqual(r.aqiBand, { label: 'Good', color: '#3ec46d' });
+  assert.equal(r.driver, 'ozone');
+  assert.equal(r.uv, 2);
+  assert.equal(r.uvBand.label, 'Low');
+  // Fixture "now" is 2 PM; the day's peak of 4 (3.5 rounded) was at noon.
+  assert.deepEqual(r.uvNext, { uv: 4, at: Date.parse('2026-09-24T16:00:00Z'), when: 'earlier' });
+});
+
+test('airReport looks ahead before the peak and to tomorrow at night', () => {
+  const aq = load('air-quality');
+  const morning = { ...aq, current: { ...aq.current, uv_index: 0.6 } };
+  assert.equal(airReport(morning, Date.parse('2026-09-24T13:10:00Z'), TZ).uvNext.when, 'later');
+  const night = { ...aq, current: { ...aq.current, uv_index: 0 } };
+  const r = airReport(night, Date.parse('2026-09-25T02:00:00Z'), TZ);
+  assert.equal(r.uvNext.when, 'tomorrow');
+  assert.ok(r.uvNext.uv > 0);
+});
+
+test('AQI and UV bands follow the EPA and WHO breakpoints', () => {
+  assert.deepEqual([50, 51, 101, 151, 201, 301].map((v) => aqiBand(v).label), ['Good', 'Moderate', 'Unhealthy for sensitive groups', 'Unhealthy', 'Very unhealthy', 'Hazardous']);
+  assert.deepEqual([0, 3, 6, 8, 11].map((v) => uvBand(v).label), ['Low', 'Moderate', 'High', 'Very high', 'Extreme']);
 });
 
 test('precipWord maps forecast text to a short noun', () => {

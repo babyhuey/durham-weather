@@ -68,6 +68,36 @@ export function quarterHours(openMeteo, now, count = 8) {
   }));
 }
 
+// EPA AQI and WHO UV index bands: [upper bound, label, color].
+const AQI_BANDS = [[50, 'Good', '#3ec46d'], [100, 'Moderate', '#f2d34b'], [150, 'Unhealthy for sensitive groups', '#ff9a3c'], [200, 'Unhealthy', '#ff5a5a'], [300, 'Very unhealthy', '#b36bff'], [Infinity, 'Hazardous', '#a8324a']];
+const UV_BANDS = [[2, 'Low', '#3ec46d'], [5, 'Moderate', '#f2d34b'], [7, 'High', '#ff9a3c'], [10, 'Very high', '#ff5a5a'], [Infinity, 'Extreme', '#b36bff']];
+const band = (bands, v) => { const [, label, color] = bands.find(([max]) => v <= max); return { label, color }; };
+export const aqiBand = (aqi) => band(AQI_BANDS, aqi);
+export const uvBand = (uv) => band(UV_BANDS, uv);
+
+const POLLUTANTS = [['us_aqi_pm2_5', 'fine particles (PM2.5)'], ['us_aqi_ozone', 'ozone'], ['us_aqi_pm10', 'coarse dust (PM10)'], ['us_aqi_nitrogen_dioxide', 'nitrogen dioxide']];
+
+// Open-Meteo air-quality response (timeformat=unixtime) → what the card shows.
+export function airReport(aq, now, tz) {
+  const c = aq.current;
+  const driver = POLLUTANTS.map(([key, name]) => [name, c[key] ?? -1]).reduce((a, b) => (b[1] > a[1] ? b : a))[0];
+  const uv = Math.round(c.uv_index ?? 0);
+  const hours = aq.hourly.time.map((t, i) => ({ at: t * 1000, uv: Math.round(aq.hourly.uv_index[i] ?? 0) }));
+  const peakOf = (list) => list.reduce((a, b) => (b.uv > a.uv ? b : a), { uv: 0, at: null });
+  const today = localDate(now, tz);
+  const todays = hours.filter((h) => localDate(h.at, tz) === today);
+  const later = peakOf(todays.filter((h) => h.at > floorHour(now)));
+  const earlier = peakOf(todays.filter((h) => h.at < floorHour(now)));
+  let uvNext = null;
+  if (later.uv > uv) uvNext = { ...later, when: 'later' };
+  else if (earlier.uv > uv && uv > 0) uvNext = { ...earlier, when: 'earlier' };
+  else if (uv === 0) {
+    const tomorrow = peakOf(hours.filter((h) => localDate(h.at, tz) > today));
+    if (tomorrow.uv > 0) uvNext = { ...tomorrow, when: 'tomorrow' };
+  }
+  return { aqi: c.us_aqi, aqiBand: aqiBand(c.us_aqi), driver, uv, uvBand: uvBand(uv), uvNext };
+}
+
 // Radar sees rain that already exists; the HRRR model can see rain that hasn't formed yet.
 export function headline(nws, radar, quarters, tz) {
   if (radar?.rainSoon) return { text: radar.text, source: 'radar' };
