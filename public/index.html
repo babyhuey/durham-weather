@@ -6,6 +6,9 @@
 <title>Durham Weather</title>
 <meta name="theme-color" content="#56697f">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='12' cy='13' r='7' fill='%23f5c451'/%3E%3Cpath d='M9 26a6 6 0 0 1 1-11.9A7 7 0 0 1 23.4 16 5 5 0 0 1 23 26z' fill='%23dfe7f1'/%3E%3C/svg%3E">
+<script>
+  try { const t = localStorage.getItem('wx:theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch {}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;400;500&family=Figtree:wght@400;500;600&display=swap">
@@ -19,11 +22,38 @@
     --glass-edge: rgba(255, 255, 255, 0.24);
     --rule: rgba(255, 255, 255, 0.2);
     --rain: #d6ecff;
+    --veil: 0;
     --display: 'Jost', 'Futura', 'Avenir Next', system-ui, sans-serif;
     --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
     color-scheme: dark;
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #eef3fa;
+      --ink-soft: rgba(238, 243, 250, 0.66);
+      --glass: rgba(6, 11, 22, 0.42);
+      --glass-edge: rgba(255, 255, 255, 0.1);
+      --rule: rgba(255, 255, 255, 0.1);
+      --rain: #9fd0ff;
+      --veil: 0.62;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink: #eef3fa;
+    --ink-soft: rgba(238, 243, 250, 0.66);
+    --glass: rgba(6, 11, 22, 0.42);
+    --glass-edge: rgba(255, 255, 255, 0.1);
+    --rule: rgba(255, 255, 255, 0.1);
+    --rain: #9fd0ff;
+    --veil: 0.62;
+  }
   * { box-sizing: border-box; }
+  body::after { content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: #050a14; opacity: var(--veil); transition: opacity 0.3s ease; }
+  .topbar { position: relative; z-index: 2; max-width: 960px; margin: -12px auto 8px; display: flex; justify-content: flex-end; }
+  .theme { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-edge); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .theme button { font: inherit; font-size: 12px; font-weight: 600; color: var(--ink-soft); background: none; border: 0; border-radius: 999px; padding: 4px 11px; margin: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .theme button[aria-pressed="true"] { color: #10203a; background: rgba(255, 255, 255, 0.88); text-shadow: none; }
+  .theme svg { width: 13px; height: 13px; }
   html { min-height: 100%; background: var(--sky-top); }
   body {
     margin: 0;
@@ -38,12 +68,40 @@
     padding-block: calc(28px + env(safe-area-inset-top, 0px)) calc(28px + env(safe-area-inset-bottom, 0px));
   }
   body::before { content: ''; position: fixed; inset: 0; z-index: 0; background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%); }
-  #drizzle { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
-  .app { position: relative; z-index: 1; max-width: 440px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  #drizzle { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+  .app { position: relative; z-index: 2; max-width: 440px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
   @media (min-width: 820px) {
     .app { max-width: 960px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
     .now { grid-column: 1 / -1; }
+  }
+  @media (min-width: 1100px) {
+    body { font-size: 16px; }
+    html .topbar { max-width: 1240px; }
+    html .app {
+      max-width: 1240px; gap: 22px 24px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-areas: "now now now" "note note note" "next days days" "radar days days" "hours hours hours" "foot foot foot";
+    }
+    html .col { display: contents; }
+    html .now { grid-area: now; justify-content: flex-start; gap: 64px; }
+    html .hero { width: 240px; }
+    html .quip { font-size: 15px; }
+    html .temp { font-size: 148px; }
+    html .area-note { grid-area: note; }
+    html .next-card { grid-area: next; }
+    html .radar-card { grid-area: radar; }
+    html .days-card { grid-area: days; }
+    html .hours-card { grid-area: hours; }
+    html .foot-area { grid-area: foot; }
+    html .next-text { font-size: 21px; }
+    html .hours { grid-auto-columns: minmax(64px, 1fr); }
+    html .hours .h-icon .wx { width: 42px; height: 42px; }
+    html .hours .h-temp { font-size: 17px; }
+    html .hours .bar { height: 56px; }
+    html .day { grid-template-columns: 60px 40px minmax(0, 1fr) 52px 96px 70px 60px; padding-block: 13px; font-size: 16px; }
+    html .day .d-icon .wx { width: 38px; height: 38px; }
+    html .day .d-cond { font-size: 15px; }
   }
   .tab { font-variant-numeric: tabular-nums; }
 
@@ -114,7 +172,15 @@
   .q-time { color: var(--ink-soft); }
   .q-caption { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
   .next-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
-  .next-foot a { color: var(--ink); font-weight: 600; }
+  .radar-card { display: block; color: inherit; text-decoration: none; transition: transform 0.15s ease, border-color 0.15s ease; }
+  .radar-card:hover { border-color: rgba(255, 255, 255, 0.5); transform: translateY(-1px); }
+  .radar-card .label { margin: 0; }
+  .rc-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .rc-when { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: rgba(126, 195, 255, 0.28); }
+  .rc-when.forecast { background: rgba(245, 196, 81, 0.35); }
+  #rc-canvas { display: block; width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 12px; background: rgba(8, 14, 26, 0.55); }
+  .rc-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12px; color: var(--ink-soft); }
+  .rc-open { color: var(--ink); font-weight: 600; white-space: nowrap; }
   .hours { display: grid; grid-auto-flow: column; grid-auto-columns: 46px; gap: 4px; overflow-x: auto; text-align: center; font-size: 12px; padding-bottom: 6px; scrollbar-width: thin; }
   .hours .h-temp { font-size: 15px; font-weight: 500; }
   .hours .h-icon .wx { width: 34px; height: 34px; margin-top: 4px; }
@@ -154,6 +220,13 @@
 </head>
 <body>
 <canvas id="drizzle" aria-hidden="true"></canvas>
+<div class="topbar">
+  <div class="theme" role="group" aria-label="Color theme">
+    <button type="button" data-theme-choice="auto" aria-pressed="false" title="Match your device"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg>Auto</button>
+    <button type="button" data-theme-choice="light" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Light</button>
+    <button type="button" data-theme-choice="dark" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 1.8a6.5 6.5 0 1 0 3.7 9.6A5.5 5.5 0 0 1 10.5 1.8z" fill="currentColor"/></svg>Dark</button>
+  </div>
+</div>
 <main class="app" id="app" aria-live="polite">
   <section class="now">
     <div class="place">Durham</div>

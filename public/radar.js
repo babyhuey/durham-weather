@@ -1,5 +1,5 @@
 import { HOME, getPosition } from './shared.js';
-import { runNowcast, radarTemplate, latestValid, ZOOM } from './radar-data.js';
+import { runNowcast, radarTemplate, latestValid, inRadarCoverage, ZOOM } from './radar-data.js';
 import { advect, dbzToRgb, pixelToLonLat, scorecard, STEP_MIN, TILE } from './nowcast.js';
 import { formatClock } from './weather.js';
 
@@ -85,6 +85,11 @@ async function start() {
   const here = (await getPosition()) ?? HOME;
   map.setView([here.lat, here.lon], 8);
   L.marker([here.lat, here.lon], { icon: L.divIcon({ className: '', html: '<div class="you"></div>', iconSize: [14, 14] }), interactive: false }).addTo(map);
+  if (!inRadarCoverage(here.lat, here.lon)) {
+    $('summary').textContent = 'This radar only covers the lower 48 states, so there is nothing to show here.';
+    $('time').textContent = '';
+    return;
+  }
 
   let nowcast = null;
   try {

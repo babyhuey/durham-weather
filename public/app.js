@@ -2,13 +2,16 @@ import {
   buildDays, nextHour, hourStrip, currentConditions, nearestStation,
   sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock,
 } from './weather.js';
-import { iconSVG, weatherKind, quip, sillyDistance } from './icons.js';
+import { iconSVG, weatherKind, quip, sillyDistance, nextUnit } from './icons.js';
 import { HOME, store, esc, HttpError, fetchJSON, getPosition } from './shared.js';
 import { runNowcast } from './radar-data.js';
+import { miniFrames, drawMini } from './radar-mini.js';
 
 const API = 'https://api.weather.gov';
 const REFRESH_MS = 10 * 60000;
 const app = document.getElementById('app');
+let preview = null;
+let previewTimer = null;
 
 async function getMeta({ lat, lon }) {
   const key = `wx:meta:${lat},${lon}`;
@@ -58,6 +61,7 @@ async function buildModel() {
   const top = headline(next, radar?.summary, quarters, meta.tz);
   next.text = top.text;
   next.source = top.source;
+  preview = radar ? { frames: miniFrames(radar), kmPerPx: radar.kmPerPx, tz: meta.tz } : null;
   const current = currentConditions(observation, periods, now);
   const isDay = sunElevation(now, meta.lat, meta.lon) > -0.833;
   return {
@@ -81,7 +85,7 @@ function paintSky(m) {
   const sky = skyGradient(sunElevation(Date.now(), m.lat, m.lon), m.cover);
   document.documentElement.style.setProperty('--sky-top', sky.top);
   document.documentElement.style.setProperty('--sky-bottom', sky.bottom);
-  document.querySelector('meta[name="theme-color"]').content = sky.top;
+  document.querySelector('meta[name="theme-color"]').content = isDark() ? '#0b111c' : sky.top;
   drizzle(m.radarRain || m.next.pop >= 40);
 }
 
@@ -90,7 +94,9 @@ const deg = (v) => (v == null ? '--' : `${v}°`);
 
 function render(m, stale) {
   const updated = new Date(m.savedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: m.tz });
-  const far = sillyDistance(m.station.km, m.savedAt);
+  const pick = nextUnit(store.get('wx:units-seen') ?? []);
+  store.set('wx:units-seen', pick.seen);
+  const far = sillyDistance(m.station.km, pick.index);
   const source = m.current.source === 'station'
     ? `Measured at ${esc(m.station.name.split(',')[0])} · ${esc(far.text)} away (${far.miles})`
     : 'Forecast for this hour (no recent station reading)';
@@ -99,6 +105,7 @@ function render(m, stale) {
     stale && `Showing ${updated} data. weather.gov isn't responding right now.`,
   ].filter(Boolean);
   const nowKind = m.kind ?? weatherKind(m.current.text, true, m.current.tempF);
+  document.title = `${m.place} Weather`;
 
   app.innerHTML = `
     <section class="now">
@@ -114,8 +121,8 @@ function render(m, stale) {
       </figure>
     </section>
     <div class="col">
-      ${notices.map((n) => `<div class="notice">${esc(n)}</div>`).join('')}
-      <section class="glass" aria-labelledby="next-h">
+      ${notices.map((n) => `<div class="notice area-note">${esc(n)}</div>`).join('')}
+      <section class="glass next-card" aria-labelledby="next-h">
         <h2 class="label" id="next-h">Next hour</h2>
         <p class="next-text">${esc(m.next.text)}</p>
         ${m.quarters?.length && !m.quarters.some((q) => q.mm > 0) ? '<div class="q-caption">HRRR model: no rain in the next 2 hours.</div>' : ''}
@@ -130,9 +137,15 @@ function render(m, stale) {
           </div>
           <div class="q-caption">Rain every 15 min · HRRR model</div>` : ''}
         <div class="next-meta tab"><span>${deg(m.next.tempNow)} → ${deg(m.next.tempNext)}</span><span>Wind ${esc(m.next.wind)}${m.next.gust ? `, gusts ${m.next.gust} mph` : ''}</span></div>
-        <div class="next-foot"><span>Headline: ${esc(m.next.source ?? 'weather.gov')}</span><a href="radar">Radar map →</a></div>
+        <div class="next-foot"><span>Headline: ${esc(m.next.source ?? 'weather.gov')}</span></div>
       </section>
-      <section class="glass" aria-labelledby="hours-h">
+      ${preview ? `
+        <a class="glass radar-card" href="radar" aria-label="Open the radar map">
+          <div class="rc-head"><h2 class="label">Radar</h2><span class="rc-when tab" id="rc-when">Now</span></div>
+          <canvas id="rc-canvas" aria-hidden="true"></canvas>
+          <div class="rc-foot"><span>Last 15 minutes, then the forecast hour</span><span class="rc-open">Open map →</span></div>
+        </a>` : ''}
+      <section class="glass hours-card" aria-labelledby="hours-h">
         <h2 class="label" id="hours-h">Next 12 hours · chance of rain · wind mph</h2>
         <div class="hours tab" tabindex="0">
           ${m.hours.map((h) => `
@@ -149,7 +162,7 @@ function render(m, stale) {
       </section>
     </div>
     <div class="col">
-      <section class="glass tab" aria-labelledby="days-h">
+      <section class="glass tab days-card" aria-labelledby="days-h">
         <h2 class="label" id="days-h">7 days</h2>
         <div class="day day-key"><span></span><span></span><span class="d-cond"></span><span class="d-pop">chance</span><span class="d-range">low – high</span><span class="d-wind">wind</span><span class="d-total">total</span></div>
         ${m.days.map((d) => `
@@ -163,12 +176,40 @@ function render(m, stale) {
             <span class="d-total">${inches(d.precipIn)}</span>
           </div>`).join('')}
       </section>
-      <p class="foot">
+      <p class="foot foot-area">
         Updated ${updated} · weather.gov grid ${esc(m.grid)}<br>
         <a href="radar">Radar map</a> · <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
       </p>
     </div>`;
   paintSky(m);
+  startPreview();
+}
+
+function startPreview() {
+  clearInterval(previewTimer);
+  const canvas = document.getElementById('rc-canvas');
+  if (!preview || !canvas) return;
+  const { frames, kmPerPx, tz } = preview;
+  const nowIndex = frames.findIndex((f) => f.forecast) - 1;
+  const label = document.getElementById('rc-when');
+  const show = (i) => {
+    const f = frames[i];
+    drawMini(canvas, f, kmPerPx);
+    const mins = Math.round((f.ms - frames[nowIndex >= 0 ? nowIndex : frames.length - 1].ms) / 60000);
+    label.textContent = mins === 0 ? 'Now' : mins < 0 ? `${-mins} min ago` : `Forecast +${mins} min`;
+    label.classList.toggle('forecast', f.forecast);
+    label.title = formatClock(f.ms, tz);
+  };
+  const rest = nowIndex >= 0 ? nowIndex : frames.length - 1;
+  show(rest);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || frames.length < 2) return;
+  let i = rest, hold = 0;
+  previewTimer = setInterval(() => {
+    if ((i === rest || i === frames.length - 1) && hold++ < 3) return;
+    hold = 0;
+    i = (i + 1) % frames.length;
+    show(i);
+  }, 450);
 }
 
 function renderError() {
@@ -240,6 +281,22 @@ function drizzle(on) {
   };
   step();
 }
+
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const isDark = () => document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && darkQuery.matches);
+
+function applyTheme(choice) {
+  if (choice === 'light' || choice === 'dark') document.documentElement.dataset.theme = choice;
+  else delete document.documentElement.dataset.theme;
+  store.set('wx:theme', choice);
+  document.querySelectorAll('[data-theme-choice]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeChoice === choice)));
+  const m = store.get('wx:last');
+  if (m) paintSky(m);
+}
+
+document.querySelectorAll('[data-theme-choice]').forEach((b) => b.addEventListener('click', () => applyTheme(b.dataset.themeChoice)));
+darkQuery.addEventListener('change', () => { const m = store.get('wx:last'); if (m) paintSky(m); });
+applyTheme(store.get('wx:theme') ?? 'auto');
 
 const last = store.get('wx:last');
 if (last) render(last, false);

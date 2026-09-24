@@ -53,7 +53,11 @@ async function loadFrames(mosaic) {
   throw new Error('Radar frames are unavailable right now.');
 }
 
+// The IEM national composite only covers the lower 48 states.
+export const inRadarCoverage = (lat, lon) => lat > 24 && lat < 50 && lon > -125.5 && lon < -66;
+
 export async function runNowcast(lat, lon, fmt) {
+  if (!inRadarCoverage(lat, lon)) throw new Error('Radar composite covers the lower 48 states only.');
   const mosaic = mosaicTiles(lat, lon, ZOOM);
   const { valid, frames } = await loadFrames(mosaic);
   const { w, h } = frames[0];
@@ -73,5 +77,5 @@ export async function runNowcast(lat, lon, fmt) {
   log = recordForecast(log, { place, validMs: valid, wet: series.map((d) => d >= RAIN_DBZ) });
   store.set(LOG_KEY, log);
 
-  return { validMs: valid, motion, series, summary, grid: grids[0], w, h, mosaic, log };
+  return { validMs: valid, motion, series, summary, grid: grids[0], grids, w, h, px, py, kmPerPx, mosaic, log };
 }

@@ -61,8 +61,88 @@ const SILLY_UNITS = [
   ['attoparsecs', 0.0308568],
   ['Great Pyramids', 138.5],
   ['Cheerwine cans', 0.122],
-  ['Durham Bulls fields (home to center)', 125],
+  ['Durham Bulls outfields (home plate to center)', 125],
   ['sticks of butter', 0.12],
+  ['par-4 golf holes', 366],
+  ['Statues of Liberty', 93],
+  ['Empire State Buildings', 443],
+  ['bowling lanes', 18.29],
+  ['basketball courts', 28.65],
+  ['tennis courts', 23.77],
+  ['Olympic swimming pools', 50],
+  ['cubits', 0.4572],
+  ['fathoms', 1.8288],
+  ['nautical miles', 1852],
+  ['horse hands', 0.1016],
+  ['rods', 5.0292],
+  ['Boeing 747s', 70.66],
+  ['Titanics', 269],
+  ['Golden Gate Bridge spans', 1280],
+  ['Washington Monuments', 169.3],
+  ['Space Needles', 184],
+  ['T. rexes', 12.3],
+  ['brachiosauruses', 22],
+  ['elephants (trunk to tail)', 6],
+  ['alpacas', 1.5],
+  ['sloths', 0.6],
+  ['garden gnomes', 0.3],
+  ['rubber ducks', 0.1],
+  ['pool noodles', 1.5],
+  ['baguettes', 0.65],
+  ['large pizzas', 0.356],
+  ['Twinkies', 0.1],
+  ['pencils', 0.19],
+  ['paperclips', 0.033],
+  ['credit cards', 0.0856],
+  ['iPhones', 0.147],
+  ['hockey rinks', 61],
+  ['ping pong tables', 2.74],
+  ['surfboards', 2.7],
+  ['canoes', 5],
+  ['VW Beetles', 4.08],
+  ['shopping carts', 0.9],
+  ['fridges on their sides', 1.8],
+  ['queen-size beds', 2.03],
+  ['grand pianos', 2.7],
+  ['guitars', 1.0],
+  ['bowling pins', 0.38],
+  ['soccer fields', 105],
+  ['Appalachian Trails', 3524000],
+  ['laps of Charlotte Motor Speedway', 2414],
+  ['Krispy Kreme doughnuts', 0.09],
+  ['Duke Chapel towers', 64],
+  ['pickleball courts', 13.41],
+  ['yoga mats', 1.83],
+  ['footlong subs', 0.3048],
+  ['Pringles cans', 0.23],
+  ['LEGO bricks', 0.032],
+  ['sheets of letter paper', 0.2794],
+  ['wiener dogs', 0.6],
+  ['house cats', 0.46],
+  ['golden retrievers', 1.1],
+  ['horses', 2.4],
+  ['kangaroo hops', 8],
+  ['cheetah strides', 7],
+  ['regular human steps', 0.76],
+  ['Usain Bolt strides', 2.44],
+  ["Shaquille O'Neals", 2.16],
+  ['Danny DeVitos', 1.47],
+  ['Michael Jordans', 1.98],
+  ['Oreos', 0.045],
+  ['grains of rice', 0.006],
+  ['ants', 0.005],
+  ['parking spaces', 5.5],
+  ['Manhattan blocks', 80],
+  ['yardsticks', 0.9144],
+  ['meter sticks (finally, metric)', 1],
+  ["men's size 10 shoes", 0.28],
+  ['megalodons', 18],
+  ['Loch Ness monsters (disputed)', 12],
+  ['Millennium Falcons', 34.75],
+  ['USS Enterprises', 289],
+  ['Death Stars (the first one)', 160000],
+  ['hobbits', 1.07],
+  ['sea otters holding hands', 1.2],
 ];
 
 function roughly(n) {
@@ -71,9 +151,18 @@ function roughly(n) {
   return n.toLocaleString('en-US', { maximumSignificantDigits: 3 });
 }
 
-// A different ridiculous unit every 10 minutes, always paired with real miles.
-export function sillyDistance(km, now = Date.now()) {
-  const [unit, meters] = SILLY_UNITS[Math.floor(now / 600000) % SILLY_UNITS.length];
+export const SILLY_UNIT_COUNT = SILLY_UNITS.length;
+
+// Shuffle bag: a random unit the viewer hasn't seen yet; once all are used, start over.
+export function nextUnit(seen = [], random = Math.random) {
+  const fresh = seen.length >= SILLY_UNITS.length ? [] : seen;
+  const left = SILLY_UNITS.map((_, i) => i).filter((i) => !fresh.includes(i));
+  const index = left[Math.floor(random() * left.length)];
+  return { index, seen: [...fresh, index] };
+}
+
+export function sillyDistance(km, index) {
+  const [unit, meters] = SILLY_UNITS[index % SILLY_UNITS.length];
   return { text: `${roughly((km * 1000) / meters)} ${unit}`, miles: `${Math.round(km / 1.609344)} mi` };
 }
 
@@ -124,7 +213,7 @@ const ART = {
   'clear-night': () => `${stars([[20, 24, 5], [98, 20, 4], [104, 70, 5], [22, 92, 4], [88, 104, 3]])}<g class="bob">${moon(56, 64, 1.1, 'sleepy')}</g><g class="zzz"><text x="80" y="44" font-family="system-ui" font-weight="700" font-size="14" fill="#fff">z</text></g><g class="zzz" style="animation-delay:1s"><text x="88" y="34" font-family="system-ui" font-weight="700" font-size="11" fill="#fff">z</text></g>`,
   'partly-day': () => `${sun(44, 42, 22, 'happy')}<g class="slide">${cloud(68, 74, 0.85, 'squint')}</g>`,
   'partly-night': () => `${stars([[18, 20, 4], [102, 24, 5], [100, 100, 4]])}${moon(42, 44, 0.8, 'sleepy')}<g class="slide">${cloud(70, 78, 0.8, 'sleepy')}</g>`,
-  cloudy: () => `${cloud(40, 40, 0.62, 'meh', '#c9d2df', '#a9b5c6')}<g class="bob">${cloud(66, 72, 0.95, 'meh')}</g><g class="zzz" style="animation-duration:4s"><text x="96" y="46" font-family="system-ui" font-style="italic" font-size="10" fill="#fff">sigh</text></g>`,
+  cloudy: () => `${cloud(40, 40, 0.62, 'meh', '#c9d2df', '#a9b5c6')}<g class="bob">${cloud(66, 72, 0.95, 'meh')}</g><g class="zzz" style="animation-duration:4s"><text x="88" y="46" font-family="system-ui" font-style="italic" font-size="10" fill="#fff">sigh</text></g>`,
   'maybe-rain': () => `<g class="bob">${cloud(58, 52, 0.95, 'nervous', '#e8eef6', '#c3cedd')}</g><g class="dangle"><path d="M62 84q-5 8 0 12q5 -4 0 -12z" fill="#7ec3ff"/></g><text x="92" y="36" font-family="system-ui" font-weight="800" font-size="20" fill="#fff" class="twinkle">?</text>`,
   rain: () => `${cloud(58, 46, 1, 'sad', '#d9e2ee', '#aebbd0')}${drops([34, 48, 62, 76, 90], 78)}<g transform="translate(92 100)"><path d="M-14 0a14 12 0 0 1 28 0z" fill="#ff5d8f"/><path d="M0 0v12q0 4 -4 3" stroke="#23304a" stroke-width="2" fill="none" stroke-linecap="round"/></g>`,
   storm: () => `${cloud(60, 44, 1.05, 'angry', '#6b7689', '#4b5466', '#fff')}<g class="flash"><path d="M44 72l-10 20h9l-6 18l18 -24h-10l7 -14z" fill="#ffe14d"/></g><g class="flash" style="animation-delay:1.3s"><path d="M82 72l-8 16h8l-5 14l15 -20h-9l5 -10z" fill="#ffe14d"/></g>${drops([30, 62, 96], 78, '#9fd0ff', 12)}`,

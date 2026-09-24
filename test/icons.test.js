@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { weatherKind, iconSVG, quip, KINDS, sillyDistance } from '../public/icons.js';
+import { weatherKind, iconSVG, quip, KINDS, sillyDistance, nextUnit, SILLY_UNIT_COUNT } from '../public/icons.js';
 
 test('weatherKind maps weather.gov wording to a character', () => {
   const cases = [
@@ -40,19 +40,25 @@ test('iconSVG renders every character, animated only as the hero', () => {
   }
 });
 
-test('sillyDistance rotates units every 10 minutes and keeps real miles', () => {
-  const km = 22.8;
-  const slot = 600000;
-  const texts = new Set();
-  for (let i = 0; i < 20; i++) {
-    const d = sillyDistance(km, i * slot);
-    assert.equal(d.miles, '14 mi');
-    texts.add(d.text);
+test('sillyDistance converts to a silly unit and keeps real miles', () => {
+  assert.deepEqual(sillyDistance(22.8, 0), { text: '4.72 leagues', miles: '14 mi' });
+  assert.equal(sillyDistance(22.8, 1).text, '1.9 million honeybees');
+  const texts = new Set(Array.from({ length: SILLY_UNIT_COUNT }, (_, i) => sillyDistance(22.8, i).text));
+  assert.equal(texts.size, 100);
+  assert.ok([...texts].every((t) => !/NaN|undefined|Infinity/.test(t)));
+});
+
+test('nextUnit never repeats until all 100 units have been shown', () => {
+  let seen = [];
+  const shown = [];
+  for (let i = 0; i < SILLY_UNIT_COUNT; i++) {
+    const pick = nextUnit(seen);
+    shown.push(pick.index);
+    seen = pick.seen;
   }
-  assert.equal(texts.size, 20);
-  assert.equal(sillyDistance(km, 0).text, '4.72 leagues');
-  assert.equal(sillyDistance(km, slot).text, '1.9 million honeybees');
-  assert.equal(sillyDistance(km, 0).text, sillyDistance(km, slot - 1).text);
+  assert.equal(new Set(shown).size, 100);
+  const again = nextUnit(seen);
+  assert.deepEqual(again.seen, [again.index], 'bag refills after a full cycle');
 });
 
 test('quip is stable within an hour', () => {
