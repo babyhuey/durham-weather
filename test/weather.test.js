@@ -5,6 +5,7 @@ import {
   parseDuration, expandSeries, expandAmounts, buildDays, nextHour, hourStrip,
   currentConditions, nearestStation, sunElevation, skyGradient, skyCoverAt, precipWord,
   windMph, compass, notableGust, quarterHours, headline, airReport, aqiBand, uvBand,
+  stationDetails, minuteRing,
 } from '../public/weather.js';
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
@@ -192,4 +193,62 @@ test('precipWord maps forecast text to a short noun', () => {
   assert.equal(precipWord('Slight Chance Rain And Snow'), 'Snow');
   assert.equal(precipWord('Chance Freezing Rain'), 'Wintry mix');
   assert.equal(precipWord('Isolated Thunderstorms'), 'Storms');
+});
+
+test('stationDetails converts the latest observation to US units', () => {
+  const d = stationDetails({ features: [observation] });
+  assert.equal(d.tempF, 54);
+  assert.equal(d.feelsF, 54);
+  assert.equal(d.dewF, 52);
+  assert.equal(d.humidity, 94);
+  assert.equal(d.windDir, 'N');
+  assert.equal(d.windMph, 9);
+  assert.equal(d.gustMph, 20);
+  assert.equal(d.visMi, 10);
+  assert.equal(d.ceilingFt, 1000);
+  assert.equal(d.pressureIn, 30.29);
+  assert.equal(d.pressureTrend, null);
+});
+
+test('stationDetails prefers heat index or wind chill for feels-like', () => {
+  const warm = structuredClone(observation);
+  warm.properties.heatIndex.value = 30;
+  assert.equal(stationDetails({ features: [warm] }).feelsF, 86);
+});
+
+test('stationDetails reports no ceiling under scattered or clear skies', () => {
+  const clear = structuredClone(observation);
+  clear.properties.cloudLayers = [{ base: { value: 1500 }, amount: 'SCT' }];
+  assert.equal(stationDetails({ features: [clear] }).ceilingFt, null);
+});
+
+test('stationDetails compares pressure with about three hours earlier', () => {
+  const at = (hoursAgo, pa) => {
+    const o = structuredClone(observation);
+    o.properties.timestamp = new Date(Date.parse(observation.properties.timestamp) - hoursAgo * 3600000).toISOString();
+    o.properties.barometricPressure.value = pa;
+    return o;
+  };
+  assert.equal(stationDetails({ features: [at(0, 102570), at(1, 102500), at(3, 102400)] }).pressureTrend, 'rising');
+  assert.equal(stationDetails({ features: [at(0, 102570), at(3, 102700)] }).pressureTrend, 'falling');
+  assert.equal(stationDetails({ features: [at(0, 102570), at(3, 102560)] }).pressureTrend, 'steady');
+});
+
+test('minuteRing marks each of the next 60 minutes by rain intensity', () => {
+  const t0 = NOW;
+  const quarters = [{ t: t0, mm: 0 }, { t: t0 + 15 * 60000, mm: 0.3 }, { t: t0 + 30 * 60000, mm: 3 }, { t: t0 + 45 * 60000, mm: 0 }];
+  const ring = minuteRing(quarters, null, t0);
+  assert.equal(ring.length, 60);
+  assert.equal(ring[0], 0);
+  assert.equal(ring[20], 1);
+  assert.equal(ring[40], 3);
+  assert.equal(ring[59], 0);
+});
+
+test('minuteRing takes the wetter of radar and model', () => {
+  const radar = { validMs: NOW - 5 * 60000, series: [0, 0, 38, 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+  const ring = minuteRing(null, radar, NOW);
+  assert.equal(ring[0], 0);
+  assert.equal(ring[6], 2);
+  assert.equal(ring[30], 0);
 });

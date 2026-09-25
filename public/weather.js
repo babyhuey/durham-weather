@@ -264,6 +264,62 @@ export function currentConditions(observation, periods, now) {
   return { tempF: p.temperature, text: p.shortForecast, source: 'forecast' };
 }
 
+const PA_PER_INHG = 3386.39;
+const round = (v, f) => (v == null ? null : Math.round(v * f) / f);
+
+// Pressure change over about three hours; 70 Pa is roughly 0.02 inHg.
+function pressureTrend(obs) {
+  const [latest, ...older] = obs.filter((o) => o.barometricPressure?.value != null);
+  if (!latest) return null;
+  const target = Date.parse(latest.timestamp) - 3 * HOUR;
+  const past = older
+    .filter((o) => Date.parse(o.timestamp) <= target + HOUR)
+    .reduce((a, b) => (a && Math.abs(Date.parse(a.timestamp) - target) <= Math.abs(Date.parse(b.timestamp) - target) ? a : b), null);
+  if (!past) return null;
+  const diff = latest.barometricPressure.value - past.barometricPressure.value;
+  return diff >= 70 ? 'rising' : diff <= -70 ? 'falling' : 'steady';
+}
+
+// A station's recent observations (newest first) → the measured conditions list, in US units.
+export function stationDetails(observations) {
+  const obs = observations.features.map((f) => f.properties);
+  const o = obs[0];
+  const v = (key) => o[key]?.value ?? null;
+  const ceiling = (o.cloudLayers ?? [])
+    .filter((l) => ['BKN', 'OVC', 'VV'].includes(l.amount) && l.base?.value != null)
+    .map((l) => l.base.value)
+    .sort((a, b) => a - b)[0];
+  return {
+    timestamp: Date.parse(o.timestamp),
+    tempF: cToF(v('temperature')),
+    feelsF: cToF(v('heatIndex') ?? v('windChill') ?? v('temperature')),
+    dewF: cToF(v('dewpoint')),
+    humidity: v('relativeHumidity') == null ? null : Math.round(v('relativeHumidity')),
+    windDir: compass(v('windDirection')),
+    windMph: kmhToMph(v('windSpeed')),
+    gustMph: kmhToMph(v('windGust')),
+    visMi: round(v('visibility') == null ? null : v('visibility') / 1609.34, 1),
+    ceilingFt: ceiling == null ? null : Math.round((ceiling * 3.28084) / 100) * 100,
+    pressureIn: round(v('barometricPressure') == null ? null : v('barometricPressure') / PA_PER_INHG, 100),
+    pressureTrend: pressureTrend(obs),
+  };
+}
+
+const MINUTE = 60000;
+const mmLevel = (mm) => (mm >= 2 ? 3 : mm >= 0.6 ? 2 : mm >= 0.1 ? 1 : 0);
+const dbzLevel = (dbz) => (dbz >= 45 ? 3 : dbz >= 35 ? 2 : dbz >= 20 ? 1 : 0);
+
+// Rain intensity (0 dry, 1 light, 2 moderate, 3 heavy) for each of the next 60 minutes,
+// from 15-minute HRRR amounts and 5-minute radar nowcast steps, whichever is wetter.
+export function minuteRing(quarters, radar, now) {
+  return Array.from({ length: 60 }, (_, i) => {
+    const t = now + i * MINUTE;
+    const q = (quarters ?? []).find((x) => x.t <= t && t < x.t + 15 * MINUTE);
+    const dbz = radar ? radar.series[Math.floor((t - radar.validMs) / (5 * MINUTE))] : null;
+    return Math.max(q ? mmLevel(q.mm) : 0, dbz == null ? 0 : dbzLevel(dbz));
+  });
+}
+
 export function skyCoverAt(grid, now) {
   return expandSeries(grid.properties.skyCover.values).get(floorHour(now)) ?? 50;
 }

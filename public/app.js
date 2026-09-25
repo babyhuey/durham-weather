@@ -1,46 +1,16 @@
 import {
-  buildDays, nextHour, hourStrip, currentConditions, nearestStation,
+  buildDays, nextHour, hourStrip, currentConditions,
   sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock, airReport,
 } from './weather.js';
 import { iconSVG, weatherKind, quip, sillyDistance, nextUnit, airQuip, uvQuip } from './icons.js';
-import { HOME, store, esc, HttpError, fetchJSON, getPosition } from './shared.js';
+import { store, esc, fetchJSON } from './shared.js';
+import { API, resolveLocation } from './location.js';
 import { runNowcast } from './radar-data.js';
 import { miniSnapshot, drawMini } from './radar-mini.js';
 
-const API = 'https://api.weather.gov';
 const REFRESH_MS = 10 * 60000;
 const app = document.getElementById('app');
 let preview = null;
-
-async function getMeta({ lat, lon }) {
-  const key = `wx:meta:${lat},${lon}`;
-  const cached = store.get(key);
-  if (cached) return cached;
-  const points = (await fetchJSON(`${API}/points/${lat},${lon}`)).properties;
-  const stations = await fetchJSON(points.observationStations);
-  const meta = {
-    lat, lon,
-    tz: points.timeZone,
-    city: points.relativeLocation.properties.city,
-    grid: `${points.gridId} ${points.gridX},${points.gridY}`,
-    gridUrl: points.forecastGridData,
-    hourlyUrl: points.forecastHourly,
-    station: nearestStation(stations, lat, lon),
-  };
-  store.set(key, meta);
-  return meta;
-}
-
-async function resolveLocation() {
-  const here = await getPosition();
-  if (here) {
-    try { return { meta: await getMeta(here), where: 'near you' }; } catch (err) {
-      if (!(err instanceof HttpError && err.status === 404)) throw err;
-      return { meta: await getMeta(HOME), where: 'home', note: 'weather.gov only covers the US, so this is the Durham forecast.' };
-    }
-  }
-  return { meta: await getMeta(HOME), where: 'home' };
-}
 
 async function buildModel() {
   const { meta, where, note } = await resolveLocation();
@@ -181,7 +151,7 @@ function render(m, stale) {
       </section>
       <p class="foot foot-area">
         Updated ${updated} · weather.gov grid ${esc(m.grid)}<br>
-        <a href="radar">Radar map</a> · <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
+        <a href="today">Today</a> · <a href="radar">Radar map</a> · <a href="https://forecast.weather.gov/MapClick.php?lat=${m.lat}&lon=${m.lon}" target="_blank" rel="noopener">Full forecast on weather.gov</a>
       </p>
     </div>`;
   paintSky(m);
