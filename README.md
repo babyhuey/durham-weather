@@ -13,3 +13,15 @@ npm test         # unit tests against saved real API responses
 npm run serve    # local preview of public/
 npm run deploy   # Cloudflare Pages
 ```
+
+## Android app
+
+`android/` is a small Android app: the Today page in a full-screen WebView, plus a native home-screen widget (current conditions and six days of low/high from weather.gov, refreshed every 30 minutes). The whole toolchain runs in Docker; nothing Android is installed on the host.
+
+```sh
+android/docker/build.sh      # signed release APK -> android/app/build/outputs/apk/release/
+android/docker/emulator.sh   # headless emulator (needs /dev/kvm) with the APK installed
+docker exec durham-weather-emu adb shell am start -n app.durhamweather/.MainActivity --ez pin_widget true
+```
+
+The release key is kept outside the repo in `~/.config/durham-weather/` (`release.jks` + `signing.properties`). Keep it: phones only accept updates signed with the same key.

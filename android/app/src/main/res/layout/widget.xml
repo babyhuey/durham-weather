@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="14dp"
+    android:paddingEnd="8dp"
+    android:paddingVertical="8dp">
+
+    <ImageView
+        android:id="@+id/now_icon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@drawable/wx_sun"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="6dp"
+        android:layout_marginEnd="10dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/now_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="--°"
+            android:textColor="@color/text"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/now_low"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:text="--°"
+            android:textColor="@color/muted"
+            android:textSize="20sp" />
+    </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/div0"
+            android:layout_width="1dp"
+            android:layout_height="44dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:id="@+id/day0"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/day0_name"
+                style="@style/WidgetDayName" />
+
+            <ImageView
+                android:id="@+id/day0_icon"
+                style="@style/WidgetDayIcon" />
+
+            <TextView
+                android:id="@+id/day0_temps"
+                style="@style/WidgetDayTemps" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/div1"
+            android:layout_width="1dp"
+            android:layout_height="44dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:id="@+id/day1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/day1_name"
+                style="@style/WidgetDayName" />
+
+            <ImageView
+                android:id="@+id/day1_icon"
+                style="@style/WidgetDayIcon" />
+
+            <TextView
+                android:id="@+id/day1_temps"
+                style="@style/WidgetDayTemps" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/div2"
+            android:layout_width="1dp"
+            android:layout_height="44dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:id="@+id/day2"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/day2_name"
+                style="@style/WidgetDayName" />
+
+            <ImageView
+                android:id="@+id/day2_icon"
+                style="@style/WidgetDayIcon" />
+
+            <TextView
+                android:id="@+id/day2_temps"
+                style="@style/WidgetDayTemps" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/div3"
+            android:layout_width="1dp"
+            android:layout_height="44dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:id="@+id/day3"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/day3_name"
+                style="@style/WidgetDayName" />
+
+            <ImageView
+                android:id="@+id/day3_icon"
+                style="@style/WidgetDayIcon" />
+
+            <TextView
+                android:id="@+id/day3_temps"
+                style="@style/WidgetDayTemps" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/div4"
+            android:layout_width="1dp"
+            android:layout_height="44dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:id="@+id/day4"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/day4_name"
+                style="@style/WidgetDayName" />
+
+            <ImageView
+                android:id="@+id/day4_icon"
+                style="@style/WidgetDayIcon" />
+
+            <TextView
+                android:id="@+id/day4_temps"
+                style="@style/WidgetDayTemps" />
+        </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/div5"
+            android:layout_width="1dp"
+            android:layout_height="44dp"
+            android:background="@color/divider" />
+
+        <LinearLayout
+            android:id="@+id/day5"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/day5_name"
+                style="@style/WidgetDayName" />
+
+            <ImageView
+                android:id="@+id/day5_icon"
+                style="@style/WidgetDayIcon" />
+
+            <TextView
+                android:id="@+id/day5_temps"
+                style="@style/WidgetDayTemps" />
+        </LinearLayout>
+
+</LinearLayout>
