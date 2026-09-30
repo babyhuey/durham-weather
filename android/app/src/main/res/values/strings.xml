@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Durham Weather</string>
+    <string name="widget_name">Forecast</string>
+    <string name="widget_description">Current conditions and the next six days</string>
+</resources>
