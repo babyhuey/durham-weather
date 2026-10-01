@@ -18,6 +18,8 @@ private const val PREFS = "weather"
 // Fallback when the app has never had a location fix: ZIP 27712, same as the web app.
 val HOME = 36.091 to -78.902
 
+class HttpException(val status: Int, url: String) : Exception("HTTP $status from $url")
+
 data class Day(val label: String, val kind: String, val low: Int?, val high: Int?)
 
 data class Snapshot(
@@ -87,23 +89,31 @@ object Weather {
         val p = prefs(ctx)
         val lat = p.getString("lat", null)?.toDouble() ?: HOME.first
         val lon = p.getString("lon", null)?.toDouble() ?: HOME.second
-        val meta = meta(ctx, lat, lon)
+        // weather.gov only covers the US; elsewhere fall back to the home forecast like the web app.
+        val meta = try {
+            meta(ctx, lat, lon)
+        } catch (e: HttpException) {
+            if (e.status != 404) throw e
+            meta(ctx, HOME.first, HOME.second)
+        }
         val periods = get(meta.getString("forecast")).getJSONObject("properties").getJSONArray("periods")
         val snap = build(periods, current(meta, periods))
         p.edit().putString("snapshot", snap.toJson()).apply()
         return snap
     }
 
+    // One cached lookup, replaced whenever the location changes.
     private fun meta(ctx: Context, lat: Double, lon: Double): JSONObject {
-        val key = "meta:$lat,$lon"
-        prefs(ctx).getString(key, null)?.let { return JSONObject(it) }
+        val key = "$lat,$lon"
+        prefs(ctx).getString("meta", null)?.let { JSONObject(it) }?.takeIf { it.optString("key") == key }?.let { return it }
         val points = get("$API/points/$lat,$lon").getJSONObject("properties")
         val stations = get(points.getString("observationStations")).getJSONArray("features")
         val meta = JSONObject()
+            .put("key", key)
             .put("forecast", points.getString("forecast"))
             .put("hourly", points.getString("forecastHourly"))
             .put("station", nearestStation(stations, lat, lon))
-        prefs(ctx).edit().putString(key, meta.toString()).apply()
+        prefs(ctx).edit().putString("meta", meta.toString()).apply()
         return meta
     }
 
@@ -115,10 +125,24 @@ object Weather {
         val c = obs?.optJSONObject("temperature")?.let { if (it.isNull("value")) null else it.getDouble("value") }
         val fresh = obs != null && c != null &&
             System.currentTimeMillis() - OffsetDateTime.parse(obs.getString("timestamp")).toInstant().toEpochMilli() < 90 * 60_000
-        val hourly = runCatching { get(meta.getString("hourly")).getJSONObject("properties").getJSONArray("periods").getJSONObject(0) }
+        val hourly = runCatching { currentPeriod(get(meta.getString("hourly")).getJSONObject("properties").getJSONArray("periods")) }
             .getOrNull() ?: periods.getJSONObject(0)
-        if (fresh) return (c!! * 9 / 5 + 32).roundToInt() to obs!!.optString("textDescription").ifBlank { hourly.getString("shortForecast") }
-        return hourly.getInt("temperature") to hourly.getString("shortForecast")
+        if (fresh) {
+            val text = if (obs!!.isNull("textDescription")) "" else obs.optString("textDescription")
+            return (c!! * 9 / 5 + 32).roundToInt() to text.ifBlank { hourly.getString("shortForecast") }
+        }
+        return hourly.optIntOrNull("temperature") to hourly.getString("shortForecast")
+    }
+
+    // The hourly period covering now; NWS sometimes serves a product whose first hour is already past.
+    private fun currentPeriod(periods: JSONArray): JSONObject {
+        val now = System.currentTimeMillis()
+        val all = (0 until periods.length()).map { periods.getJSONObject(it) }
+        return all.firstOrNull {
+            val start = OffsetDateTime.parse(it.getString("startTime")).toInstant().toEpochMilli()
+            val end = OffsetDateTime.parse(it.getString("endTime")).toInstant().toEpochMilli()
+            now in start until end
+        } ?: all.first()
     }
 
     // Each day column is a daytime period paired with the night that follows it (WED 66/80 = Wed night low / Wed high).
@@ -131,14 +155,14 @@ object Weather {
                 label = OffsetDateTime.parse(p.getString("startTime")).dayOfWeek
                     .getDisplayName(TextStyle.SHORT, Locale.US).uppercase(),
                 kind = weatherKind(p.getString("shortForecast"), true),
-                low = night?.getInt("temperature"),
-                high = p.getInt("temperature"),
+                low = night?.optIntOrNull("temperature"),
+                high = p.optIntOrNull("temperature"),
             )
         }
         return Snapshot(
             tempF = now.first,
             kind = weatherKind(now.second, isDay),
-            lowF = list.firstOrNull { !it.getBoolean("isDaytime") }?.getInt("temperature"),
+            lowF = list.firstOrNull { !it.getBoolean("isDaytime") }?.optIntOrNull("temperature"),
             days = days,
             savedAt = System.currentTimeMillis(),
         )
@@ -164,7 +188,7 @@ object Weather {
         conn.setRequestProperty("User-Agent", "DurhamWeather Android (github.com/babyhuey/durham-weather)")
         conn.setRequestProperty("Accept", "application/geo+json")
         try {
-            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode} from $url")
+            if (conn.responseCode !in 200..299) throw HttpException(conn.responseCode, url)
             return JSONObject(conn.inputStream.bufferedReader().readText())
         } finally {
             conn.disconnect()
