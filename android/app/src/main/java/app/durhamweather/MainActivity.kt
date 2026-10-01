@@ -13,6 +13,8 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.util.Log
+import android.view.ViewGroup
 import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -55,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private var askingLocation = false
     private var locationListener: LocationListener? = null
     private var locationCancel: CancellationSignal? = null
+    // Survives a resume replacing the location request, so the first-grant reload isn't lost.
+    private var reloadOnFix = false
 
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         askingLocation = false
@@ -158,6 +162,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         cancelLocationRequest()
+        (web.parent as? ViewGroup)?.removeView(web)
         web.destroy()
         super.onDestroy()
     }
@@ -201,12 +206,12 @@ class MainActivity : ComponentActivity() {
     // settles on the home forecast, so it reloads once the app has a fix to hand it.
     private fun saveLocation(reloadPage: Boolean = false) {
         val lm = getSystemService(LocationManager::class.java)
-        var reload = reloadPage
+        if (reloadPage) reloadOnFix = true
         val save = { loc: Location? ->
             if (loc != null && !isDestroyed) {
                 if (Weather.saveLocation(this, loc.latitude, loc.longitude)) RefreshWorker.enqueue(this)
-                if (reload) web.reload()
-                reload = false
+                if (reloadOnFix) web.reload()
+                reloadOnFix = false
             }
         }
         val providers = lm.getProviders(true)
@@ -223,7 +228,7 @@ class MainActivity : ComponentActivity() {
                 // LocationListener's other methods only gained default bodies in API 30.
                 val listener = object : LocationListener {
                     override fun onLocationChanged(location: Location) {
-                        locationListener = null
+                        if (locationListener === this) locationListener = null
                         save(location)
                     }
                     override fun onProviderEnabled(provider: String) {}
@@ -235,6 +240,6 @@ class MainActivity : ComponentActivity() {
                 @Suppress("DEPRECATION")
                 lm.requestSingleUpdate(provider, listener, mainLooper)
             }
-        }
+        }.onFailure { Log.w("DurhamWeather", "Location request on $provider failed", it) }
     }
 }

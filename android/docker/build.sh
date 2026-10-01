@@ -6,6 +6,7 @@ here="$(cd "$(dirname "$0")/.." && pwd)"
 keys="${DURHAM_WEATHER_KEYS:-$HOME/.config/durham-weather}"
 cache="${HOME}/.cache/durham-weather-gradle"
 mkdir -p "$cache"
+[ -f "$keys/signing.properties" ] || { echo "Missing $keys/signing.properties (release key); see README" >&2; exit 1; }
 docker build -q -t durham-weather-android "$here/docker" >/dev/null
 docker run --rm -u "$(id -u):$(id -g)" \
   -e GRADLE_USER_HOME=/gradle -e HOME=/tmp \
