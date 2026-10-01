@@ -7,6 +7,7 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -59,6 +60,7 @@ class MainActivity : ComponentActivity() {
     private var locationCancel: CancellationSignal? = null
     // Survives a resume replacing the location request, so the first-grant reload isn't lost.
     private var reloadOnFix = false
+    private var showingOffline = false
 
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         askingLocation = false
@@ -90,8 +92,14 @@ class MainActivity : ComponentActivity() {
                     return true
                 }
 
+                override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+                    if (url.startsWith("$SITE/")) showingOffline = false
+                }
+
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                     if (!request.isForMainFrame) return
+                    Log.w("DurhamWeather", "Page load failed: ${error.errorCode} ${error.description} ${request.url}")
+                    showingOffline = true
                     view.loadDataWithBaseURL(null, offlinePage(request.url.toString()), "text/html", "utf-8", null)
                 }
             }
@@ -151,8 +159,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         web.onResume()
+        if (showingOffline) reloadPage()
         if (hasLocation()) saveLocation()
         RefreshWorker.enqueue(this)
+    }
+
+    // The offline notice is a data page, so reloading it would just show the notice again.
+    private fun reloadPage() {
+        if (showingOffline) web.loadUrl("$SITE/today") else web.reload()
     }
 
     override fun onPause() {
@@ -210,8 +224,11 @@ class MainActivity : ComponentActivity() {
         val save = { loc: Location? ->
             if (loc != null && !isDestroyed) {
                 if (Weather.saveLocation(this, loc.latitude, loc.longitude)) RefreshWorker.enqueue(this)
-                if (reloadOnFix) web.reload()
-                reloadOnFix = false
+                // A cached fix can be hours old; wait for one inside the page's own 10-minute maximumAge.
+                if (reloadOnFix && System.currentTimeMillis() - loc.time < 10 * 60_000) {
+                    reloadPage()
+                    reloadOnFix = false
+                }
             }
         }
         val providers = lm.getProviders(true)
