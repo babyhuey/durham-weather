@@ -113,8 +113,7 @@ class ForecastWidget : AppWidgetProvider() {
 
 class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result = try {
-        Weather.refresh(applicationContext)
-        ForecastWidget.render(applicationContext)
+        if (Weather.refresh(applicationContext) != null) ForecastWidget.render(applicationContext)
         Result.success()
     } catch (e: Exception) {
         Log.w("DurhamWeather", "Widget refresh failed (attempt ${runAttemptCount + 1})", e)

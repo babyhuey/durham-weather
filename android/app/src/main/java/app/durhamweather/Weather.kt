@@ -78,27 +78,39 @@ fun weatherKind(text: String, isDay: Boolean): String {
 object Weather {
     fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun saveLocation(ctx: Context, lat: Double, lon: Double) {
-        prefs(ctx).edit().putString("lat", round3(lat).toString()).putString("lon", round3(lon).toString()).apply()
+    // Returns whether the rounded position actually moved.
+    fun saveLocation(ctx: Context, lat: Double, lon: Double): Boolean {
+        val p = prefs(ctx)
+        val (newLat, newLon) = round3(lat).toString() to round3(lon).toString()
+        if (p.getString("lat", null) == newLat && p.getString("lon", null) == newLon) return false
+        p.edit().putString("lat", newLat).putString("lon", newLon).apply()
+        return true
     }
 
     fun cached(ctx: Context): Snapshot? =
         prefs(ctx).getString("snapshot", null)?.let { runCatching { Snapshot.fromJson(it) }.getOrNull() }
 
-    fun refresh(ctx: Context): Snapshot {
+    // Returns null when the location changed mid-fetch; a newer refresh owns the snapshot then.
+    fun refresh(ctx: Context): Snapshot? {
         val p = prefs(ctx)
         val lat = p.getString("lat", null)?.toDouble() ?: HOME.first
         val lon = p.getString("lon", null)?.toDouble() ?: HOME.second
+        val where = "$lat,$lon"
         // weather.gov only covers the US; elsewhere fall back to the home forecast like the web app.
-        val meta = try {
+        val meta = if (p.getString("outside", null) == where) meta(ctx, HOME.first, HOME.second) else try {
             meta(ctx, lat, lon)
         } catch (e: HttpException) {
             if (e.status != 404) throw e
+            p.edit().putString("outside", where).apply()
             meta(ctx, HOME.first, HOME.second)
         }
         val periods = get(meta.getString("forecast")).getJSONObject("properties").getJSONArray("periods")
         val snap = build(periods, current(meta, periods))
-        p.edit().putString("snapshot", snap.toJson()).apply()
+        synchronized(this) {
+            val now = "${p.getString("lat", null)?.toDouble() ?: HOME.first},${p.getString("lon", null)?.toDouble() ?: HOME.second}"
+            if (now != where) return null
+            p.edit().putString("snapshot", snap.toJson()).apply()
+        }
         return snap
     }
 
