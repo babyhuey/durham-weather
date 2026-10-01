@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
         val granted = hasLocation()
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, granted, false) }
         pendingGeo = null
-        if (granted) saveLocation()
+        if (granted) saveLocation(reloadPage = true)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -155,12 +155,17 @@ class MainActivity : ComponentActivity() {
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
     @SuppressLint("MissingPermission")
-    private fun saveLocation() {
+    // On first launch the page asks for a position while the permission dialog is still up and
+    // settles on the home forecast, so it reloads once the app has a fix to hand it.
+    private fun saveLocation(reloadPage: Boolean = false) {
         val lm = getSystemService(LocationManager::class.java)
+        var reload = reloadPage
         val save = { loc: Location? ->
             if (loc != null) {
                 Weather.saveLocation(this, loc.latitude, loc.longitude)
                 RefreshWorker.enqueue(this)
+                if (reload) web.reload()
+                reload = false
             }
         }
         val providers = lm.getProviders(true)
