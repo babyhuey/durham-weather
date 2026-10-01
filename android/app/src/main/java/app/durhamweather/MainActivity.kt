@@ -14,6 +14,9 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.CancellationSignal
+import android.os.PowerManager
+import android.provider.Settings
+import android.net.Uri
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.GeolocationPermissions
@@ -65,6 +68,7 @@ class MainActivity : ComponentActivity() {
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         askingLocation = false
         val granted = hasLocation()
+        askBatteryExemption()
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, granted, false) }
         pendingGeo = null
         if (granted) saveLocation(reloadPage = true)
@@ -147,6 +151,8 @@ class MainActivity : ComponentActivity() {
         if (!hasLocation()) {
             askingLocation = true
             askLocation.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+        } else {
+            askBatteryExemption()
         }
         handlePin(intent)
     }
@@ -211,6 +217,21 @@ class MainActivity : ComponentActivity() {
           <a href="$url" style="color:#e8edf5;border:1px solid #ffffff55;border-radius:999px;padding:10px 22px;text-decoration:none">Try again</a>
         </body>
     """.trimIndent()
+
+    // Battery saver and Samsung's app sleeping hold back the widget's background refresh unless the
+    // app is exempt. Asked once per install, after the location prompt so the dialogs don't stack.
+    @SuppressLint("BatteryLife")
+    private fun askBatteryExemption() {
+        val prefs = Weather.prefs(this)
+        if (prefs.getBoolean("askedBattery", false)) return
+        if (getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)) return
+        prefs.edit().putBoolean("askedBattery", true).apply()
+        try {
+            startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+        } catch (e: ActivityNotFoundException) {
+            // Some builds don't offer the prompt; the setting is still under App info > Battery.
+        }
+    }
 
     private fun hasLocation() =
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED

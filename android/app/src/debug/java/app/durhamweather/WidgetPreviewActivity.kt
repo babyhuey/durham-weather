@@ -11,7 +11,7 @@ import android.widget.TextView
 // Renders the widget layout at fixed sizes so short launcher rows can be checked without a launcher.
 class WidgetPreviewActivity : Activity() {
     private val sample = Snapshot(
-        tempF = 77, kind = "clear-day", lowF = 63, savedAt = 0,
+        tempF = 77, kind = "clear-day", lowF = 63, savedAt = System.currentTimeMillis(),
         days = listOf(
             Day("THU", "partly-day", 63, 87), Day("FRI", "clear-day", 67, 90), Day("SAT", "partly-rain", 62, 80),
             Day("SUN", "storm", 62, 72), Day("MON", "partly-rain", 53, 75), Day("TUE", "clear-day", 47, 68),
@@ -30,7 +30,7 @@ class WidgetPreviewActivity : Activity() {
             val frame = FrameLayout(this)
             list.addView(frame, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(height)).apply { bottomMargin = dp(8) })
             val views = RemoteViews(packageName, R.layout.widget)
-            ForecastWidget.fill(views, sample, 6)
+            ForecastWidget.fill(this, views, sample, 6)
             frame.addView(views.apply(this, frame))
         }
         list.setBackgroundColor(0xFF101010.toInt())

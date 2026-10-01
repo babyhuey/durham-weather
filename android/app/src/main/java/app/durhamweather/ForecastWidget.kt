@@ -10,6 +10,10 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.SpannableStringBuilder
+import android.text.format.DateFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
@@ -57,7 +61,7 @@ class ForecastWidget : AppWidgetProvider() {
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                 )
                 views.setOnClickPendingIntent(R.id.root, open)
-                if (snap != null) fill(views, snap, columnsFor(manager.getAppWidgetOptions(id)))
+                if (snap != null) fill(ctx, views, snap, columnsFor(manager.getAppWidgetOptions(id)))
                 manager.updateAppWidget(id, views)
             }
         }
@@ -69,8 +73,11 @@ class ForecastWidget : AppWidgetProvider() {
             return ((width - 104) / 42).coerceIn(1, 6)
         }
 
-        fun fill(views: RemoteViews, snap: Snapshot, columns: Int) {
+        fun fill(ctx: Context, views: RemoteViews, snap: Snapshot, columns: Int) {
             views.setImageViewResource(R.id.now_icon, icon(snap.kind))
+            // Shows when the data was fetched, so a refresh held back by battery saver is visible.
+            val clock = if (DateFormat.is24HourFormat(ctx)) "H:mm" else "h:mm"
+            views.setTextViewText(R.id.now_updated, SimpleDateFormat(clock, Locale.getDefault()).format(Date(snap.savedAt)))
             views.setTextViewText(R.id.now_temp, deg(snap.tempF))
             views.setTextViewText(R.id.now_low, deg(snap.lowF))
             DAY_IDS.forEachIndexed { i, (name, img, temps) ->
