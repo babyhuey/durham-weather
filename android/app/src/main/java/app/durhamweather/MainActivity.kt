@@ -3,12 +3,13 @@ package app.durhamweather
 import android.Manifest
 import android.annotation.SuppressLint
 import android.appwidget.AppWidgetManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.webkit.GeolocationPermissions
@@ -29,6 +30,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 
 private const val SITE = "https://durham-weather.pages.dev"
+private const val SITE_HOST = "durham-weather.pages.dev"
 
 // The WebView's own geolocation can take longer than the page's 5 s timeout, so the page
 // gets the fix the app already has and only falls back to navigator.geolocation without one.
@@ -49,8 +51,10 @@ private val GEO_SHIM = """
 class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
+    private var askingLocation = false
 
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        askingLocation = false
         val granted = hasLocation()
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, granted, false) }
         pendingGeo = null
@@ -67,8 +71,15 @@ class MainActivity : ComponentActivity() {
             settings.setGeolocationEnabled(true)
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-                    if (request.url.toString().startsWith(SITE)) return false
-                    startActivity(Intent(Intent.ACTION_VIEW, request.url))
+                    val url = request.url
+                    if (url.scheme == "https" && url.host == SITE_HOST) return false
+                    if (url.scheme == "http" || url.scheme == "https") {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, url))
+                        } catch (e: ActivityNotFoundException) {
+                            // No browser installed; stay on the page.
+                        }
+                    }
                     return true
                 }
 
@@ -90,8 +101,13 @@ class MainActivity : ComponentActivity() {
             }
             webChromeClient = object : WebChromeClient() {
                 override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
-                    if (hasLocation()) callback.invoke(origin, true, false)
-                    else pendingGeo = origin to callback
+                    // Only park the callback while the permission dialog is up; otherwise the page
+                    // would wait out its own timeout on every refresh.
+                    when {
+                        hasLocation() -> callback.invoke(origin, true, false)
+                        askingLocation -> pendingGeo = origin to callback
+                        else -> callback.invoke(origin, false, false)
+                    }
                 }
             }
         }
@@ -111,9 +127,11 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        if (savedInstanceState == null) web.loadUrl("$SITE/today") else web.restoreState(savedInstanceState)
-        if (hasLocation()) saveLocation()
-        else askLocation.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+        if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) web.loadUrl("$SITE/today")
+        if (!hasLocation()) {
+            askingLocation = true
+            askLocation.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
+        }
         handlePin(intent)
     }
 
@@ -124,7 +142,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        web.onResume()
+        if (hasLocation()) saveLocation()
         RefreshWorker.enqueue(this)
+    }
+
+    override fun onPause() {
+        web.onPause()
+        super.onPause()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -170,10 +195,20 @@ class MainActivity : ComponentActivity() {
         }
         val providers = lm.getProviders(true)
         providers.mapNotNull { lm.getLastKnownLocation(it) }.maxByOrNull { it.time }?.let(save)
+        val provider = listOf(LocationManager.FUSED_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+            .firstOrNull { it in providers } ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val provider = listOf(LocationManager.FUSED_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
-                .firstOrNull { it in providers } ?: return
             lm.getCurrentLocation(provider, null, mainExecutor) { save(it) }
+        } else {
+            // LocationListener's other methods only gained default bodies in API 30.
+            @Suppress("DEPRECATION")
+            lm.requestSingleUpdate(provider, object : LocationListener {
+                override fun onLocationChanged(location: Location) = save(location)
+                override fun onProviderEnabled(provider: String) {}
+                override fun onProviderDisabled(provider: String) {}
+                @Deprecated("Deprecated in Java")
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            }, mainLooper)
         }
     }
 }

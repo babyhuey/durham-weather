@@ -13,6 +13,7 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.work.CoroutineWorker
@@ -116,6 +117,7 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
         ForecastWidget.render(applicationContext)
         Result.success()
     } catch (e: Exception) {
+        Log.w("DurhamWeather", "Widget refresh failed (attempt ${runAttemptCount + 1})", e)
         if (runAttemptCount < 3) Result.retry() else Result.failure()
     }
 
