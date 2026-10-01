@@ -18,7 +18,7 @@ private const val PREFS = "weather"
 // Fallback when the app has never had a location fix: ZIP 27712, same as the web app.
 val HOME = 36.091 to -78.902
 
-class HttpException(val status: Int, url: String) : Exception("HTTP $status from $url")
+class HttpException(val status: Int, val url: String) : Exception("HTTP $status from $url")
 
 data class Day(val label: String, val kind: String, val low: Int?, val high: Int?)
 
@@ -97,11 +97,14 @@ object Weather {
         val lon = p.getString("lon", null)?.toDouble() ?: HOME.second
         val where = "$lat,$lon"
         // weather.gov only covers the US; elsewhere fall back to the home forecast like the web app.
-        val meta = if (p.getString("outside", null) == where) meta(ctx, HOME.first, HOME.second) else try {
+        // A position NWS doesn't cover is remembered for a day so refreshes skip the failing lookup.
+        val outside = p.getString("outside", null) == where &&
+            System.currentTimeMillis() - p.getLong("outsideAt", 0) < 24 * 3_600_000L
+        val meta = if (outside) meta(ctx, HOME.first, HOME.second) else try {
             meta(ctx, lat, lon)
         } catch (e: HttpException) {
-            if (e.status != 404) throw e
-            p.edit().putString("outside", where).apply()
+            if (e.status != 404 || !e.url.startsWith("$API/points/")) throw e
+            p.edit().putString("outside", where).putLong("outsideAt", System.currentTimeMillis()).apply()
             meta(ctx, HOME.first, HOME.second)
         }
         val periods = get(meta.getString("forecast")).getJSONObject("properties").getJSONArray("periods")
