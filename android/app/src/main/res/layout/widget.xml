@@ -8,12 +8,14 @@
     android:orientation="horizontal"
     android:paddingStart="14dp"
     android:paddingEnd="8dp"
-    android:paddingVertical="8dp">
+    android:paddingVertical="2dp">
 
     <ImageView
         android:id="@+id/now_icon"
         android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_height="match_parent"
+        android:maxHeight="40dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/wx_sun"
         android:importantForAccessibility="no" />
 
@@ -31,7 +33,7 @@
             android:includeFontPadding="false"
             android:text="--°"
             android:textColor="@color/text"
-            android:textSize="22sp" />
+            android:textSize="21sp" />
 
         <TextView
             android:id="@+id/now_low"
@@ -40,7 +42,7 @@
             android:includeFontPadding="false"
             android:text="--°"
             android:textColor="@color/muted"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
     </LinearLayout>
 
         <FrameLayout
@@ -52,9 +54,9 @@
         <LinearLayout
             android:id="@+id/day0"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView
@@ -79,9 +81,9 @@
         <LinearLayout
             android:id="@+id/day1"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView
@@ -106,9 +108,9 @@
         <LinearLayout
             android:id="@+id/day2"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView
@@ -133,9 +135,9 @@
         <LinearLayout
             android:id="@+id/day3"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView
@@ -160,9 +162,9 @@
         <LinearLayout
             android:id="@+id/day4"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView
@@ -187,9 +189,9 @@
         <LinearLayout
             android:id="@+id/day5"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:orientation="vertical">
 
             <TextView

@@ -11,20 +11,24 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:includeFontPadding">false</item>
         <item name="android:textColor">@color/day_name</item>
-        <item name="android:textSize">13sp</item>
+        <item name="android:textSize">12sp</item>
         <item name="android:textStyle">bold</item>
     </style>
 
+    <!-- Width caps the icon; height takes whatever the row leaves after the two text lines. -->
     <style name="WidgetDayIcon">
         <item name="android:layout_width">30dp</item>
-        <item name="android:layout_height">30dp</item>
-        <item name="android:layout_marginVertical">2dp</item>
+        <item name="android:layout_height">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:maxHeight">30dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:layout_marginVertical">1dp</item>
         <item name="android:importantForAccessibility">no</item>
     </style>
 
     <style name="WidgetDayTemps">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">17dp</item>
+        <item name="android:layout_height">15dp</item>
         <item name="android:gravity">center</item>
         <item name="android:includeFontPadding">false</item>
         <item name="android:maxLines">1</item>
