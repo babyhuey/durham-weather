@@ -69,7 +69,7 @@ class ForecastWidget : AppWidgetProvider() {
             return ((width - 104) / 42).coerceIn(1, 6)
         }
 
-        private fun fill(views: RemoteViews, snap: Snapshot, columns: Int) {
+        fun fill(views: RemoteViews, snap: Snapshot, columns: Int) {
             views.setImageViewResource(R.id.now_icon, icon(snap.kind))
             views.setTextViewText(R.id.now_temp, deg(snap.tempF))
             views.setTextViewText(R.id.now_low, deg(snap.lowF))
