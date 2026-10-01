@@ -12,6 +12,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.CancellationSignal
 import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -52,6 +53,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
     private var askingLocation = false
+    private var locationListener: LocationListener? = null
+    private var locationCancel: CancellationSignal? = null
 
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         askingLocation = false
@@ -91,6 +94,7 @@ class MainActivity : ComponentActivity() {
             addJavascriptInterface(object {
                 @JavascriptInterface
                 fun location(): String {
+                    if (!hasLocation()) return ""
                     val p = Weather.prefs(this@MainActivity)
                     val lat = p.getString("lat", null) ?: return ""
                     return "$lat,${p.getString("lon", null)}"
@@ -152,6 +156,19 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
+    override fun onDestroy() {
+        cancelLocationRequest()
+        web.destroy()
+        super.onDestroy()
+    }
+
+    private fun cancelLocationRequest() {
+        locationCancel?.cancel()
+        locationCancel = null
+        locationListener?.let { getSystemService(LocationManager::class.java).removeUpdates(it) }
+        locationListener = null
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         web.saveState(outState)
@@ -186,29 +203,38 @@ class MainActivity : ComponentActivity() {
         val lm = getSystemService(LocationManager::class.java)
         var reload = reloadPage
         val save = { loc: Location? ->
-            if (loc != null) {
-                Weather.saveLocation(this, loc.latitude, loc.longitude)
-                RefreshWorker.enqueue(this)
+            if (loc != null && !isDestroyed) {
+                if (Weather.saveLocation(this, loc.latitude, loc.longitude)) RefreshWorker.enqueue(this)
                 if (reload) web.reload()
                 reload = false
             }
         }
         val providers = lm.getProviders(true)
-        providers.mapNotNull { lm.getLastKnownLocation(it) }.maxByOrNull { it.time }?.let(save)
+        // Some providers need fine location below API 31; with only coarse granted they throw.
+        providers.mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }.maxByOrNull { it.time }?.let(save)
         val provider = listOf(LocationManager.FUSED_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
             .firstOrNull { it in providers } ?: return
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            lm.getCurrentLocation(provider, null, mainExecutor) { save(it) }
-        } else {
-            // LocationListener's other methods only gained default bodies in API 30.
-            @Suppress("DEPRECATION")
-            lm.requestSingleUpdate(provider, object : LocationListener {
-                override fun onLocationChanged(location: Location) = save(location)
-                override fun onProviderEnabled(provider: String) {}
-                override fun onProviderDisabled(provider: String) {}
-                @Deprecated("Deprecated in Java")
-                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-            }, mainLooper)
+        cancelLocationRequest()
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val signal = CancellationSignal().also { locationCancel = it }
+                lm.getCurrentLocation(provider, signal, mainExecutor) { save(it) }
+            } else {
+                // LocationListener's other methods only gained default bodies in API 30.
+                val listener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        locationListener = null
+                        save(location)
+                    }
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                    @Deprecated("Deprecated in Java")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                }
+                locationListener = listener
+                @Suppress("DEPRECATION")
+                lm.requestSingleUpdate(provider, listener, mainLooper)
+            }
         }
     }
 }
