@@ -5,6 +5,7 @@ import {
 import { iconSVG, weatherKind } from './icons.js';
 import { store, esc, fetchJSON } from './shared.js';
 import { API, resolveLocation } from './location.js';
+import { mountSearch } from './places.js';
 import { runNowcast } from './radar-data.js';
 
 const REFRESH_MS = 10 * 60000;
@@ -158,8 +159,9 @@ darkQuery.addEventListener('change', () => { const m = store.get('wx:today'); if
 applyTheme(store.get('wx:theme') ?? 'auto');
 
 let busy = false;
+let again = false;
 async function refresh() {
-  if (busy) return;
+  if (busy) { again = true; return; }
   busy = true;
   try {
     const model = await buildModel();
@@ -171,8 +173,14 @@ async function refresh() {
     if (last) render(last, true); else renderError();
   } finally {
     busy = false;
+    if (again) { again = false; refresh(); }
   }
 }
+
+mountSearch((place) => {
+  app.innerHTML = `<div class="place">${esc(place ? place.name : 'Your location')}</div><section class="glass now-card"><p class="headline">Loading today…</p></section>`;
+  refresh();
+});
 
 const last = store.get('wx:today');
 if (last) render(last, false);

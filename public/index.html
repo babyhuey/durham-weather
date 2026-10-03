@@ -150,6 +150,16 @@
   @keyframes wx-dangle { from { transform: rotate(-12deg) scaleY(0.9); } to { transform: rotate(12deg) scaleY(1.15); } }
   @keyframes wx-drip { from { transform: translateY(0) scaleY(1); } 70% { transform: translateY(4px) scaleY(1.4); opacity: 1; } to { transform: translateY(16px); opacity: 0; } }
   @keyframes wx-shimmer { to { transform: translateY(-4px); opacity: 0.4; } }
+  .search { position: relative; z-index: 5; max-width: 440px; margin: 0 auto 14px; }
+  .search input { box-sizing: border-box; width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 999px; padding: 9px 16px; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .search input::placeholder { color: var(--ink-soft); }
+  .search input:focus { outline: 2px solid rgba(255, 255, 255, 0.55); outline-offset: 1px; }
+  .search ul { position: absolute; left: 0; right: 0; top: calc(100% + 6px); margin: 0; padding: 6px; list-style: none; border-radius: 16px; background: rgb(14, 22, 38); color: #eef3fa; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); }
+  .search li { padding: 10px 12px; border-radius: 10px; cursor: pointer; text-shadow: none; }
+  .search li[data-i]:hover { background: rgba(255, 255, 255, 0.1); }
+  .search li small { color: rgba(238, 243, 250, 0.6); margin-left: 6px; }
+  .search li.label { cursor: default; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(238, 243, 250, 0.6); padding: 8px 12px 4px; }
+  .search li.mine { font-weight: 600; }
   .place { font-size: 16px; font-weight: 500; }
   .place small { font-weight: 400; color: var(--ink-soft); font-size: 14px; }
   .temp { font-family: var(--display); font-weight: 200; font-size: clamp(88px, 26vw, 128px); line-height: 0.95; letter-spacing: -0.04em; margin: 4px 0 2px; }
@@ -242,6 +252,10 @@
     <button type="button" data-theme-choice="light" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.2" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Light</button>
     <button type="button" data-theme-choice="dark" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10.5 1.8a6.5 6.5 0 1 0 3.7 9.6A5.5 5.5 0 0 1 10.5 1.8z" fill="currentColor"/></svg>Dark</button>
   </div>
+</div>
+<div class="search">
+  <input id="search-input" type="search" placeholder="Search a city or ZIP" autocomplete="off" enterkeyhint="search" role="combobox" aria-label="Search for a place" aria-controls="search-list" aria-expanded="false">
+  <ul id="search-list" role="listbox" hidden></ul>
 </div>
 <main class="app" id="app" aria-live="polite">
   <section class="now">

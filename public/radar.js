@@ -1,4 +1,5 @@
 import { HOME, getPosition } from './shared.js';
+import { pickedPlace } from './places.js';
 import { runNowcast, radarTemplate, latestValid, inRadarCoverage, ZOOM } from './radar-data.js';
 import { advect, dbzToRgb, pixelToLonLat, scorecard, STEP_MIN, TILE } from './nowcast.js';
 import { formatClock } from './weather.js';
@@ -82,7 +83,7 @@ function renderScore(log) {
 }
 
 async function start() {
-  const here = (await getPosition()) ?? HOME;
+  const here = pickedPlace() ?? (await getPosition()) ?? HOME;
   map.setView([here.lat, here.lon], 8);
   L.marker([here.lat, here.lon], { icon: L.divIcon({ className: '', html: '<div class="you"></div>', iconSize: [14, 14] }), interactive: false }).addTo(map);
   if (!inRadarCoverage(here.lat, here.lon)) {

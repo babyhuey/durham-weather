@@ -1,5 +1,6 @@
 import { nearestStation } from './weather.js';
 import { HOME, store, HttpError, fetchJSON, getPosition } from './shared.js';
+import { pickedPlace } from './places.js';
 
 export const API = 'https://api.weather.gov';
 
@@ -24,6 +25,8 @@ async function getMeta({ lat, lon }) {
 }
 
 export async function resolveLocation() {
+  const picked = pickedPlace();
+  if (picked) return { meta: { ...(await getMeta(picked)), city: picked.name }, where: 'searched' };
   const here = await getPosition();
   if (here) {
     try { return { meta: await getMeta(here), where: 'near you' }; } catch (err) {

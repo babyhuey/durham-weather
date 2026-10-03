@@ -5,6 +5,7 @@ import {
 import { iconSVG, weatherKind, quip, sillyDistance, nextUnit, airQuip, uvQuip } from './icons.js';
 import { store, esc, fetchJSON } from './shared.js';
 import { API, resolveLocation } from './location.js';
+import { mountSearch } from './places.js';
 import { runNowcast } from './radar-data.js';
 import { miniSnapshot, drawMini } from './radar-mini.js';
 
@@ -205,8 +206,9 @@ function renderError() {
 }
 
 let busy = false;
+let again = false;
 async function refresh() {
-  if (busy) return;
+  if (busy) { again = true; return; }
   busy = true;
   try {
     const model = await buildModel();
@@ -218,6 +220,7 @@ async function refresh() {
     if (last) render(last, true); else renderError();
   } finally {
     busy = false;
+    if (again) { again = false; refresh(); }
   }
 }
 
@@ -279,6 +282,11 @@ function applyTheme(choice) {
 document.querySelectorAll('[data-theme-choice]').forEach((b) => b.addEventListener('click', () => applyTheme(b.dataset.themeChoice)));
 darkQuery.addEventListener('change', () => { const m = store.get('wx:last'); if (m) paintSky(m); });
 applyTheme(store.get('wx:theme') ?? 'auto');
+
+mountSearch((place) => {
+  app.innerHTML = `<section class="now"><div class="place">${esc(place ? place.name : 'Your location')}</div><div class="temp tab">--°</div><div class="cond loading">Loading forecast…</div></section>`;
+  refresh();
+});
 
 const last = store.get('wx:last');
 if (last) render(last, false);
