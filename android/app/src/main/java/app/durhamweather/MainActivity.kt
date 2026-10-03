@@ -33,6 +33,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 
@@ -57,6 +58,7 @@ private val GEO_SHIM = """
 
 class MainActivity : ComponentActivity() {
     private lateinit var web: WebView
+    private lateinit var swipe: SwipeRefreshLayout
     private var pendingGeo: Pair<String, GeolocationPermissions.Callback>? = null
     private var askingLocation = false
     private var locationListener: LocationListener? = null
@@ -100,6 +102,10 @@ class MainActivity : ComponentActivity() {
                     if (url.startsWith("$SITE/")) showingOffline = false
                 }
 
+                override fun onPageFinished(view: WebView, url: String) {
+                    swipe.isRefreshing = false
+                }
+
                 override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
                     if (!request.isForMainFrame) return
                     Log.w("DurhamWeather", "Page load failed: ${error.errorCode} ${error.description} ${request.url}")
@@ -132,7 +138,15 @@ class MainActivity : ComponentActivity() {
             }
         }
         // WebView ignores its own padding, so the system-bar insets go on a wrapper.
-        val frame = FrameLayout(this).apply { addView(web) }
+        swipe = SwipeRefreshLayout(this).apply {
+            addView(web)
+            setProgressBackgroundColorSchemeColor(0xFF1C2638.toInt())
+            setColorSchemeColors(0xFFE8EDF5.toInt())
+            // The radar map is fixed full-screen and never scrolls, so a downward drag there pans the map.
+            setOnChildScrollUpCallback { _, _ -> web.canScrollVertically(-1) || web.url?.startsWith("$SITE/radar") == true }
+            setOnRefreshListener { reloadPage() }
+        }
+        val frame = FrameLayout(this).apply { addView(swipe) }
         ViewCompat.setOnApplyWindowInsetsListener(frame) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(bars.left, bars.top, bars.right, bars.bottom)
