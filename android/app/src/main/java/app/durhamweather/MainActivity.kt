@@ -70,11 +70,13 @@ class MainActivity : ComponentActivity() {
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         askingLocation = false
         val granted = hasLocation()
-        askBatteryExemption()
+        askNotifications()
         pendingGeo?.let { (origin, cb) -> cb.invoke(origin, granted, false) }
         pendingGeo = null
         if (granted) saveLocation(reloadPage = true)
     }
+
+    private val askNotify = registerForActivityResult(ActivityResultContracts.RequestPermission()) { askBatteryExemption() }
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -161,18 +163,23 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) web.loadUrl("$SITE/today")
+        if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
+            web.loadUrl(SITE + (intent.getStringExtra(EXTRA_PATH) ?: "/today"))
+        }
         if (!hasLocation()) {
             askingLocation = true
             askLocation.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION))
         } else {
-            askBatteryExemption()
+            askNotifications()
         }
+        Alerts.createChannels(this)
+        RefreshWorker.schedule(this)
         handlePin(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        intent.getStringExtra(EXTRA_PATH)?.let { web.loadUrl(SITE + it) }
         handlePin(intent)
     }
 
@@ -192,6 +199,10 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         web.onPause()
         super.onPause()
+    }
+
+    companion object {
+        const val EXTRA_PATH = "path"
     }
 
     override fun onDestroy() {
@@ -231,6 +242,17 @@ class MainActivity : ComponentActivity() {
           <a href="$url" style="color:#e8edf5;border:1px solid #ffffff55;border-radius:999px;padding:10px 22px;text-decoration:none">Try again</a>
         </body>
     """.trimIndent()
+
+    // Weather alerts and rain notices need this on Android 13+. Asked once, between the location
+    // and battery prompts so the dialogs don't stack.
+    private fun askNotifications() {
+        val prefs = Weather.prefs(this)
+        if (Build.VERSION.SDK_INT < 33 || prefs.getBoolean("askedNotify", false) ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        ) return askBatteryExemption()
+        prefs.edit().putBoolean("askedNotify", true).apply()
+        askNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
 
     // Battery saver and Samsung's app sleeping hold back the widget's background refresh unless the
     // app is exempt. Asked once per install, after the location prompt so the dialogs don't stack.

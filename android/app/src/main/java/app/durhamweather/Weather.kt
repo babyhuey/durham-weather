@@ -195,7 +195,7 @@ object Weather {
 
     private fun round3(v: Double) = (v * 1000).roundToInt() / 1000.0
 
-    private fun get(url: String): JSONObject {
+    fun get(url: String): JSONObject {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 10_000
         conn.readTimeout = 15_000

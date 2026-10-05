@@ -14,6 +14,7 @@ import android.text.format.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
@@ -21,9 +22,11 @@ import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.Constraints
@@ -32,6 +35,7 @@ class ForecastWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, manager: AppWidgetManager, ids: IntArray) {
         render(ctx)
         RefreshWorker.enqueue(ctx)
+        RefreshWorker.schedule(ctx)
     }
 
     override fun onAppWidgetOptionsChanged(ctx: Context, manager: AppWidgetManager, id: Int, options: Bundle) {
@@ -119,12 +123,13 @@ class ForecastWidget : AppWidgetProvider() {
 }
 
 class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
-    override suspend fun doWork(): Result = try {
-        if (Weather.refresh(applicationContext) != null) ForecastWidget.render(applicationContext)
-        Result.success()
-    } catch (e: Exception) {
-        Log.w("DurhamWeather", "Widget refresh failed (attempt ${runAttemptCount + 1})", e)
-        if (runAttemptCount < 3) Result.retry() else Result.failure()
+    override suspend fun doWork(): Result {
+        val failure = listOfNotNull(
+            runCatching { if (Weather.refresh(applicationContext) != null) ForecastWidget.render(applicationContext) }.exceptionOrNull(),
+            runCatching { Alerts.check(applicationContext) }.exceptionOrNull(),
+        ).firstOrNull() ?: return Result.success()
+        Log.w("DurhamWeather", "Refresh failed (attempt ${runAttemptCount + 1})", failure)
+        return if (runAttemptCount < 3) Result.retry() else Result.failure()
     }
 
     companion object {
@@ -133,6 +138,14 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
                 .build()
             WorkManager.getInstance(ctx).enqueueUniqueWork("refresh", ExistingWorkPolicy.REPLACE, request)
+        }
+
+        // Runs the notification checks even when no widget is on the home screen.
+        fun schedule(ctx: Context) {
+            val request = PeriodicWorkRequestBuilder<RefreshWorker>(30, TimeUnit.MINUTES)
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build()
+            WorkManager.getInstance(ctx).enqueueUniquePeriodicWork("periodic", ExistingPeriodicWorkPolicy.UPDATE, request)
         }
     }
 }
