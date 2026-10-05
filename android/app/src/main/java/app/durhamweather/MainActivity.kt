@@ -164,7 +164,7 @@ class MainActivity : ComponentActivity() {
         })
 
         if (savedInstanceState == null || web.restoreState(savedInstanceState) == null) {
-            web.loadUrl(SITE + (intent.getStringExtra(EXTRA_PATH) ?: "/today"))
+            web.loadUrl(SITE + (pathFrom(intent) ?: "/today"))
         }
         if (!hasLocation()) {
             askingLocation = true
@@ -179,7 +179,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        intent.getStringExtra(EXTRA_PATH)?.let { web.loadUrl(SITE + it) }
+        pathFrom(intent)?.let { web.loadUrl(SITE + it) }
         handlePin(intent)
     }
 
@@ -203,6 +203,11 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_PATH = "path"
+        // The activity is exported, so any app can send this extra; an arbitrary path such as
+        // "@other.host/" would load another site with the DurhamApp location bridge attached.
+        private val PATHS = setOf("/today", "/radar")
+
+        private fun pathFrom(intent: Intent) = intent.getStringExtra(EXTRA_PATH)?.takeIf { it in PATHS }
     }
 
     override fun onDestroy() {
