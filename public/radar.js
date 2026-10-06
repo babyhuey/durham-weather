@@ -5,8 +5,8 @@ import { advect, dbzToRgb, pixelToLonLat, scorecard, STEP_MIN, TILE } from './no
 import { formatClock } from './weather.js';
 
 const STEP_MS = STEP_MIN * 60000;
-const PAST = 12;
-const AHEAD = 12;
+const PAST = 10;
+const AHEAD = 10;
 const SHOWN = 0.72;
 const FORECAST_MIN_DBZ = 10;
 
@@ -17,7 +17,7 @@ const $ = (id) => document.getElementById(id);
 const map = L.map('map', { zoomControl: false, attributionControl: false, minZoom: 5, maxZoom: 11 }).setView([HOME.lat, HOME.lon], 8);
 L.control.attribution({ position: 'topright', prefix: false }).addTo(map);
 const esri = (layer) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${layer}/MapServer/tile/{z}/{y}/{x}`;
-const attribution = 'Map: Esri, HERE, Garmin, &copy; OpenStreetMap · Radar: <a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>';
+const attribution = 'Map: Esri, HERE, Garmin, &copy; OpenStreetMap · Radar: NOAA MRMS via <a href="https://mesonet.agron.iastate.edu/">Iowa Environmental Mesonet</a>';
 L.tileLayer(esri('World_Dark_Gray_Base'), { attribution, maxNativeZoom: 16 }).addTo(map);
 map.createPane('labels').style.zIndex = 450;
 map.getPane('labels').style.pointerEvents = 'none';

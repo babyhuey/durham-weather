@@ -1,3 +1,5 @@
+import { STEP_MIN } from './nowcast.js';
+
 const HOUR = 3600000;
 const RAD = Math.PI / 180;
 const KMH_TO_MPH = 0.621371;
@@ -310,12 +312,12 @@ const mmLevel = (mm) => (mm >= 2 ? 3 : mm >= 0.6 ? 2 : mm >= 0.1 ? 1 : 0);
 const dbzLevel = (dbz) => (dbz >= 45 ? 3 : dbz >= 35 ? 2 : dbz >= 20 ? 1 : 0);
 
 // Rain intensity (0 dry, 1 light, 2 moderate, 3 heavy) for each of the next 60 minutes,
-// from 15-minute HRRR amounts and 5-minute radar nowcast steps, whichever is wetter.
+// from 15-minute HRRR amounts and radar nowcast steps, whichever is wetter.
 export function minuteRing(quarters, radar, now) {
   return Array.from({ length: 60 }, (_, i) => {
     const t = now + i * MINUTE;
     const q = (quarters ?? []).find((x) => x.t <= t && t < x.t + 15 * MINUTE);
-    const dbz = radar ? radar.series[Math.floor((t - radar.validMs) / (5 * MINUTE))] : null;
+    const dbz = radar ? radar.series[Math.floor((t - radar.validMs) / (STEP_MIN * MINUTE))] : null;
     return Math.max(q ? mmLevel(q.mm) : 0, dbz == null ? 0 : dbzLevel(dbz));
   });
 }

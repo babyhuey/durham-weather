@@ -246,7 +246,7 @@ test('minuteRing marks each of the next 60 minutes by rain intensity', () => {
 });
 
 test('minuteRing takes the wetter of radar and model', () => {
-  const radar = { validMs: NOW - 5 * 60000, series: [0, 0, 38, 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+  const radar = { validMs: NOW - 6 * 60000, series: [0, 0, 38, 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
   const ring = minuteRing(null, radar, NOW);
   assert.equal(ring[0], 0);
   assert.equal(ring[6], 2);

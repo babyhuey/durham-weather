@@ -9,14 +9,16 @@ const STEP_MS = STEP_MIN * 60000;
 export const ZOOM = 7;
 export const FACTOR = 2;
 const FRAMES = 4;
-const LOG_KEY = 'wx:nowcast-log';
+const LOG_KEY = 'wx:nowcast-log2';
+// Scores under the old key came from unfiltered radar in 5-minute steps and can't be mixed in.
+try { localStorage.removeItem('wx:nowcast-log'); } catch { /* storage unavailable */ }
 
 const stamp = (ms) => new Date(ms).toISOString().replace(/[-:T]/g, '').slice(0, 12);
-export const radarTemplate = (ms) => `${IEM}/cache/tile.py/1.0.0/ridge::USCOMP-N0Q-${stamp(ms)}/{z}/{x}/{y}.png`;
+export const radarTemplate = (ms) => `${IEM}/cache/tile.py/1.0.0/mrms::lcref-${stamp(ms)}/{z}/{x}/{y}.png`;
 
 export async function latestValid() {
-  const j = await fetchJSON(`${IEM}/data/gis/images/4326/USCOMP/n0q_0.json`);
-  return Date.parse(j.meta.valid);
+  const j = await fetchJSON(`${IEM}/data/gis/images/4326/mrms/lcref.json`);
+  return Date.parse(j.meta.end_valid);
 }
 
 function loadImage(url) {

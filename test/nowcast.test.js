@@ -21,7 +21,7 @@ function blob(cx, cy, r = 9) {
 const fmt = (ms) => new Date(ms).toISOString().slice(11, 16);
 
 test('palette colors decode back to the same reflectivity', () => {
-  for (const dbz of [-10, 20, 35.5, 60]) {
+  for (const dbz of [11, 20, 35.5, 60]) {
     const rgba = new Uint8ClampedArray([...dbzToRgb(dbz), 255]);
     assert.equal(rgbaToDbz(rgba, 1, 1)[0], dbz);
   }
@@ -73,8 +73,8 @@ test('a cell moving toward the point is forecast to arrive', () => {
 
 test('summaries for rain now, rain nearby, and clear radar', () => {
   const base = { validMs: 0, motion: { dx: 0, dy: 3 }, kmPerPx: 2, fmt };
-  assert.match(summarize({ ...base, series: [25, 25, 25, 10, 10], echoes: 50 }).text, /^Light rain on radar right now, clearing around 00:15\.$/);
-  assert.match(summarize({ ...base, series: [35, 35, 35], echoes: 50 }).text, /continuing past 00:10/);
+  assert.match(summarize({ ...base, series: [25, 25, 25, 10, 10], echoes: 50 }).text, /^Light rain on radar right now, clearing around 00:18\.$/);
+  assert.match(summarize({ ...base, series: [35, 35, 35], echoes: 50 }).text, /continuing past 00:12/);
   assert.equal(summarize({ ...base, series: [10, 10], echoes: 50 }).text, 'Rain on radar nearby, but none headed your way in the next hour.');
   assert.equal(summarize({ ...base, series: [NO_ECHO], echoes: 0 }).text, 'Radar is clear for about 150 miles around you.');
 });
@@ -97,14 +97,14 @@ test('mercator helpers round-trip and the mosaic centers the point', () => {
 
 test('accuracy log records, reconciles and scores forecasts', () => {
   const t0 = Date.parse('2026-09-24T18:00:00Z');
-  const step = 5 * 60000;
-  let log = recordForecast([], { place: 'a', validMs: t0, wet: Array(15).fill(false).map((_, k) => k >= 6) });
+  const step = 6 * 60000;
+  let log = recordForecast([], { place: 'a', validMs: t0, wet: Array(15).fill(false).map((_, k) => k >= 5) });
   log = recordForecast(log, { place: 'a', validMs: t0, wet: Array(15).fill(true) });
   assert.equal(log.length, 3, 'duplicate issues are ignored');
   log = reconcile(log, { place: 'a', validMs: t0 + 3 * step, wetNow: false });
-  log = reconcile(log, { place: 'a', validMs: t0 + 6 * step, wetNow: true });
-  log = reconcile(log, { place: 'b', validMs: t0 + 12 * step, wetNow: true });
+  log = reconcile(log, { place: 'a', validMs: t0 + 5 * step, wetNow: true });
+  log = reconcile(log, { place: 'b', validMs: t0 + 10 * step, wetNow: true });
   const card = scorecard(log);
-  assert.deepEqual(card.map((c) => [c.minutes, c.checks, c.right, c.hits, c.rainEvents]), [[15, 1, 1, 0, 0], [30, 1, 1, 1, 1], [60, 0, 0, 0, 0]]);
+  assert.deepEqual(card.map((c) => [c.minutes, c.checks, c.right, c.hits, c.rainEvents]), [[18, 1, 1, 0, 0], [30, 1, 1, 1, 1], [60, 0, 0, 0, 0]]);
   assert.equal(echoCount(blob(50, 50)) > 100, true);
 });

@@ -1,15 +1,16 @@
-import { N0Q_PALETTE } from './n0q-palette.js';
+import { LCREF_PALETTE } from './lcref-palette.js';
 
 export const RAIN_DBZ = 20;
 export const NO_ECHO = -99;
 export const TILE = 256;
-export const STEP_MIN = 5;
+export const STEP_MIN = 6;
 
-const PALETTE = Array.from({ length: 256 }, (_, i) => parseInt(N0Q_PALETTE.slice(i * 6, i * 6 + 6), 16));
+const PALETTE = Array.from({ length: 256 }, (_, i) => parseInt(LCREF_PALETTE.slice(i * 6, i * 6 + 6), 16));
 const LUT = new Map(PALETTE.map((rgb, i) => [rgb, i]));
-export const indexToDbz = (i) => (i === 0 ? NO_ECHO : i * 0.5 - 32.5);
+export const indexToDbz = (i) => (i === 255 ? NO_ECHO : i * 0.5 - 32);
+// Palette colors are distinct only from 11 dBZ (entry 86) to 80.5 dBZ (entry 225).
 export const dbzToRgb = (dbz) => {
-  const i = Math.max(1, Math.min(255, Math.round((dbz + 32.5) * 2)));
+  const i = Math.max(86, Math.min(225, Math.round((dbz + 32) * 2)));
   return [(PALETTE[i] >> 16) & 255, (PALETTE[i] >> 8) & 255, PALETTE[i] & 255];
 };
 
@@ -76,7 +77,7 @@ export function estimateShift(a, b, w, h, maxShift = 10) {
 }
 
 // frames[0] is the newest; frames are STEP_MIN apart. Returns motion per step.
-export function estimateMotion(frames, w, h, maxShift = 10) {
+export function estimateMotion(frames, w, h, maxShift = 12) {
   const pairs = [[2, 0], [3, 1], [3, 0]].filter(([o]) => o < frames.length);
   let sx = 0, sy = 0, sw = 0;
   for (const [older, newer] of pairs) {
@@ -178,7 +179,7 @@ export function mosaicTiles(lat, lon, z) {
 }
 
 // --- Accuracy log: each forecast is checked when a radar frame for its target time arrives.
-export const LEADS = [3, 6, 12];
+export const LEADS = [3, 5, 10];
 const WEEK = 7 * 86400000;
 
 export function recordForecast(log, { place, validMs, wet }) {
