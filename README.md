@@ -16,7 +16,7 @@ npm run deploy   # Cloudflare Pages
 
 ## Android app
 
-`android/` is a small Android app: the Today page in a full-screen WebView, plus a native home-screen widget (current conditions and six days of low/high from weather.gov, refreshed every 30 minutes). The same 30-minute check sends notifications for National Weather Service alerts at your location and for rain the HRRR model shows starting within the hour. The whole toolchain runs in Docker; nothing Android is installed on the host.
+`android/` is a small Android app: the Today page in a full-screen WebView, plus a native home-screen widget (current conditions and six days of low/high from weather.gov, refreshed every 30 minutes). The same 30-minute check sends notifications for National Weather Service alerts at your location and for rain the HRRR model shows starting within the hour. It also checks this repo's GitHub releases and notifies once when a newer version is published; tapping it downloads the APK. Tag releases `vX.Y.Z` to match `versionName` and attach the APK. The whole toolchain runs in Docker; nothing Android is installed on the host.
 
 ```sh
 android/docker/build.sh      # signed release APK -> android/app/build/outputs/apk/release/

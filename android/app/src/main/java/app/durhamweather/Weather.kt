@@ -195,16 +195,18 @@ object Weather {
 
     private fun round3(v: Double) = (v * 1000).roundToInt() / 1000.0
 
-    fun get(url: String): JSONObject {
+    fun get(url: String): JSONObject = JSONObject(text(url, "application/geo+json"))
+
+    fun text(url: String, accept: String): String {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.connectTimeout = 10_000
         conn.readTimeout = 15_000
-        // weather.gov rejects requests without a User-Agent.
+        // weather.gov and GitHub both reject requests without a User-Agent.
         conn.setRequestProperty("User-Agent", "DurhamWeather Android (github.com/babyhuey/durham-weather)")
-        conn.setRequestProperty("Accept", "application/geo+json")
+        conn.setRequestProperty("Accept", accept)
         try {
             if (conn.responseCode !in 200..299) throw HttpException(conn.responseCode, url)
-            return JSONObject(conn.inputStream.bufferedReader().readText())
+            return conn.inputStream.bufferedReader().readText()
         } finally {
             conn.disconnect()
         }

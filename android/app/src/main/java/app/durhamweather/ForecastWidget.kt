@@ -127,7 +127,10 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
         val failure = listOfNotNull(
             runCatching { if (Weather.refresh(applicationContext) != null) ForecastWidget.render(applicationContext) }.exceptionOrNull(),
             runCatching { Alerts.check(applicationContext) }.exceptionOrNull(),
-        ).firstOrNull() ?: return Result.success()
+        ).firstOrNull()
+        // A GitHub hiccup shouldn't make the weather refresh retry.
+        runCatching { Updates.check(applicationContext) }.onFailure { Log.w("DurhamWeather", "Update check failed", it) }
+        failure ?: return Result.success()
         Log.w("DurhamWeather", "Refresh failed (attempt ${runAttemptCount + 1})", failure)
         return if (runAttemptCount < 3) Result.retry() else Result.failure()
     }

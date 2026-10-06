@@ -94,7 +94,7 @@ object Alerts {
         failures.firstOrNull()?.let { throw it }
     }
 
-    private fun canNotify(ctx: Context): Boolean {
+    fun canNotify(ctx: Context): Boolean {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return false
