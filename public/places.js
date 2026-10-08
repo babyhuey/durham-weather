@@ -3,6 +3,8 @@ import { store, esc, fetchJSON } from './shared.js';
 const PICKED = 'wx:place';
 const RECENT = 'wx:recent';
 const round3 = (n) => Math.round(n * 1000) / 1000;
+// The geocoder files territories under their own country codes; weather.gov forecasts all of these.
+const NWS_COUNTRIES = new Set(['US', 'PR', 'VI', 'GU', 'AS', 'MP']);
 
 export const pickedPlace = () => store.get(PICKED);
 
@@ -15,9 +17,14 @@ export function rememberPlace(recent, place) {
   return [place, ...recent.filter((p) => !same(p))].slice(0, 3);
 }
 
+export function placesFromSearch(json) {
+  return (json.results ?? []).filter((r) => NWS_COUNTRIES.has(r.country_code)).slice(0, 6).map(placeFromResult);
+}
+
 export async function searchPlaces(query) {
-  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&countryCode=US&language=en&format=json`;
-  return ((await fetchJSON(url)).results ?? []).map(placeFromResult);
+  // countryCode takes only one country, so search everywhere and keep the ones weather.gov covers.
+  const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=100&language=en&format=json`;
+  return placesFromSearch(await fetchJSON(url));
 }
 
 function choose(place) {
@@ -58,7 +65,7 @@ export function mountSearch(onPick) {
     }
     if (mine !== seq) return false;
     options = results;
-    show(results.length ? results.map(row).join('') : '<li class="label" role="presentation">No US places match.</li>');
+    show(results.length ? results.map(row).join('') : '<li class="label" role="presentation">No US places match, territories included.</li>');
     return results.length > 0;
   }
 
