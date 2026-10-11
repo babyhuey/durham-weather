@@ -41,6 +41,19 @@ class AlertsTest {
         assertEquals("Flood Advisory", fresh[0].event)
     }
 
+    // NWS Wilmington, 2026-10-10: the 2:41 AM message expired at 10:00 but its hazard ran until 8 PM,
+    // and the 9:56 AM Update to it reached the phone at 10:20.
+    @Test
+    fun remembersAlertsUntilTheHazardEnds() {
+        val beach = fixture("alerts-beach.json").getJSONArray("features")
+        val (first, _) = newAlerts(org.json.JSONArray().put(beach.get(0)), emptySet())
+        val at1020 = java.time.OffsetDateTime.parse("2026-10-10T10:20:00-04:00").toInstant().toEpochMilli()
+        val seen = first.filter { it.expires > at1020 }.map { it.id }.toSet()
+        val (fresh, updates) = newAlerts(beach, seen)
+        assertEquals(emptyList<String>(), fresh.map { it.id })
+        assertEquals(1, updates.size)
+    }
+
     @Test
     fun quartersStartAtTheCurrentQuarter() {
         val om = fixture("open-meteo.json")

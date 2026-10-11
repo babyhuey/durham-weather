@@ -44,8 +44,11 @@ fun newAlerts(features: JSONArray, seen: Set<String>): Pair<List<NwsAlert>, List
             event = p.optString("event"),
             headline = p.optString("headline").takeUnless { p.isNull("headline") } ?: p.optString("event"),
             description = p.optString("description").takeUnless { p.isNull("description") }.orEmpty(),
-            expires = p.optString("expires").takeIf { it.isNotEmpty() && !p.isNull("expires") }
-                ?.let { OffsetDateTime.parse(it).toInstant().toEpochMilli() } ?: (System.currentTimeMillis() + 24 * 3_600_000L),
+            // "expires" is when this message goes stale, often hours before the hazard "ends". Forgetting
+            // the alert then would make its next Update look new.
+            expires = listOf("expires", "ends").mapNotNull { k ->
+                p.optString(k).takeIf { it.isNotEmpty() && !p.isNull(k) }?.let { OffsetDateTime.parse(it).toInstant().toEpochMilli() }
+            }.maxOrNull() ?: (System.currentTimeMillis() + 24 * 3_600_000L),
         )
         val known = (0 until refs.length()).any { refs.getJSONObject(it).optString("identifier") in seen }
         if (known) updates += alert else fresh += alert

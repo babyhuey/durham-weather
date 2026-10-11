@@ -1,0 +1,58 @@
+{
+  "features": [
+    {
+      "properties": {
+        "id": "urn:oid:2.49.0.1.840.0.5b6acb7c67f855fcae94c578b12379f4f460c96f.003.2",
+        "event": "Beach Hazards Statement",
+        "status": "Actual",
+        "messageType": "Update",
+        "headline": "Beach Hazards Statement issued October 10 at 2:41AM EDT until October 10 at 8:00PM EDT by NWS Wilmington NC",
+        "description": "* WHAT...For the Coastal Flood Advisory, up to one half foot of\ninundation above ground level expected in low-lying area",
+        "sent": "2026-10-10T02:41:00-04:00",
+        "expires": "2026-10-10T10:00:00-04:00",
+        "ends": "2026-10-10T20:00:00-04:00",
+        "references": [
+          {
+            "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.77a14cb0c70674f983d5f8881196e82b49a5a2dc.002.2",
+            "identifier": "urn:oid:2.49.0.1.840.0.77a14cb0c70674f983d5f8881196e82b49a5a2dc.002.2",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-10-09T20:19:00-04:00"
+          },
+          {
+            "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.0da90392d2924c1902cc24019ecaaa0dcf4b194b.002.2",
+            "identifier": "urn:oid:2.49.0.1.840.0.0da90392d2924c1902cc24019ecaaa0dcf4b194b.002.2",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-10-10T02:22:00-04:00"
+          }
+        ]
+      }
+    },
+    {
+      "properties": {
+        "id": "urn:oid:2.49.0.1.840.0.b8d5ef0b8db2f0c0aa597afffeb0ee5d9887fcf0.002.2",
+        "event": "Beach Hazards Statement",
+        "status": "Actual",
+        "messageType": "Update",
+        "headline": "Beach Hazards Statement issued October 10 at 9:56AM EDT until October 10 at 8:00PM EDT by NWS Wilmington NC",
+        "description": "* WHAT...Strong east to west longshore current. There is also a\nModerate Risk of rip currents .\n\n* WHERE...Coastal Bruns",
+        "sent": "2026-10-10T09:56:00-04:00",
+        "expires": "2026-10-10T18:00:00-04:00",
+        "ends": "2026-10-10T20:00:00-04:00",
+        "references": [
+          {
+            "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.0da90392d2924c1902cc24019ecaaa0dcf4b194b.002.2",
+            "identifier": "urn:oid:2.49.0.1.840.0.0da90392d2924c1902cc24019ecaaa0dcf4b194b.002.2",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-10-10T02:22:00-04:00"
+          },
+          {
+            "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b6acb7c67f855fcae94c578b12379f4f460c96f.003.2",
+            "identifier": "urn:oid:2.49.0.1.840.0.5b6acb7c67f855fcae94c578b12379f4f460c96f.003.2",
+            "sender": "w-nws.webmaster@noaa.gov",
+            "sent": "2026-10-10T02:41:00-04:00"
+          }
+        ]
+      }
+    }
+  ]
+}
