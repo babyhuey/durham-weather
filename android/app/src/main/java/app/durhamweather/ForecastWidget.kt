@@ -30,6 +30,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.Constraints
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class ForecastWidget : AppWidgetProvider() {
     override fun onUpdate(ctx: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -123,7 +125,7 @@ class ForecastWidget : AppWidgetProvider() {
 }
 
 class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = lock.withLock {
         val failure = listOfNotNull(
             runCatching { if (Weather.refresh(applicationContext) != null) ForecastWidget.render(applicationContext) }.exceptionOrNull(),
             runCatching { Alerts.check(applicationContext) }.exceptionOrNull(),
@@ -136,6 +138,11 @@ class RefreshWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
     }
 
     companion object {
+        // "refresh" and "periodic" are separate unique works, and REPLACE doesn't stop a running
+        // refresh's blocking calls, so runs can overlap. Each notification check reads its
+        // already-sent marker before writing it; overlapping runs would both notify.
+        private val lock = Mutex()
+
         fun enqueue(ctx: Context) {
             val request = OneTimeWorkRequestBuilder<RefreshWorker>()
                 .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
