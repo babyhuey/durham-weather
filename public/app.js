@@ -1,8 +1,8 @@
 import {
   buildDays, nextHour, hourStrip, currentConditions,
-  sunElevation, skyGradient, skyCoverAt, quarterHours, headline, formatClock, airReport,
+  sunElevation, sunriseOn, sunsetOn, skyGradient, skyCoverAt, quarterHours, headline, formatClock, airReport,
 } from './weather.js';
-import { iconSVG, weatherKind, quip, sillyDistance, nextUnit, airQuip, uvQuip } from './icons.js';
+import { iconSVG, weatherKind, quip, sillyDistance, nextUnit, airQuip, uvQuip, sunIcon } from './icons.js';
 import { store, esc, fetchJSON } from './shared.js';
 import { API, resolveLocation } from './location.js';
 import { mountSearch } from './places.js';
@@ -38,6 +38,8 @@ async function buildModel() {
   return {
     kind: weatherKind(current.text, isDay, current.tempF),
     isDay,
+    sunrise: sunriseOn(now, meta.lat, meta.lon, meta.tz),
+    sunset: sunsetOn(now, meta.lat, meta.lon, meta.tz),
     air: airQuality?.current ? airReport(airQuality, now, meta.tz) : null,
     savedAt: now,
     place: meta.city, where, note,
@@ -86,6 +88,7 @@ function render(m, stale) {
         <div class="place">${esc(m.place)} <small>· ${esc(m.where)}</small></div>
         <div class="temp tab">${deg(m.current.tempF)}</div>
         <div class="cond tab">${esc(m.current.text)} · H ${deg(m.today.high)} L ${deg(m.today.low)}</div>
+        ${m.sunrise || m.sunset ? `<div class="sun tab">${[['Sunrise', m.sunrise, true], ['Sunset', m.sunset, false]].filter(([, t]) => t).map(([k, t, rising]) => `<span>${sunIcon(rising)}${k} ${esc(formatClock(t, m.tz))}</span>`).join('')}</div>` : ''}
         <div class="source">${source}</div>
       </div>
       <figure class="hero">

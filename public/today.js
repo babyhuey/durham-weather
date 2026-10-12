@@ -1,8 +1,8 @@
 import {
   currentConditions, stationDetails, minuteRing, quarterHours, headline, nextHour,
-  skyCoverAt, sunElevation, sunsetOn, skyGradient, airReport, formatClock,
+  skyCoverAt, sunElevation, sunriseOn, sunsetOn, skyGradient, airReport, formatClock,
 } from './weather.js';
-import { iconSVG, weatherKind } from './icons.js';
+import { iconSVG, weatherKind, sunIcon } from './icons.js';
 import { store, esc, fetchJSON } from './shared.js';
 import { API, resolveLocation } from './location.js';
 import { mountSearch } from './places.js';
@@ -38,6 +38,7 @@ async function buildModel() {
     lat: meta.lat, lon: meta.lon,
     tz: meta.tz,
     isDay: sunElevation(now, meta.lat, meta.lon) > -0.833,
+    sunrise: sunriseOn(now, meta.lat, meta.lon, meta.tz),
     sunset: sunsetOn(now, meta.lat, meta.lon, meta.tz),
     current,
     station,
@@ -120,7 +121,7 @@ function render(m, stale) {
             <p class="p-text">${p === m.outlook[0] ? esc(p.detail) : `${esc(p.name)}: ${esc(p.short)}`}</p>
           </div>`).join('')}
       </div>
-      ${m.sunset ? `<div class="sunset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17a6 6 0 0 1 12 0z" fill="#f5c451"/><path d="M2 17h20M12 3v5m-2.5-2.5L12 8l2.5-2.5M4.2 10.2l1.4 1.4M19.8 10.2l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Sunset<span class="tab">${esc(formatClock(m.sunset, m.tz))}</span></div>` : ''}
+      ${m.sunrise || m.sunset ? `<div class="sun">${[['Sunrise', m.sunrise, true], ['Sunset', m.sunset, false]].filter(([, t]) => t).map(([k, t, rising]) => `<div>${sunIcon(rising)}${k}<span class="tab">${esc(formatClock(t, m.tz))}</span></div>`).join('')}</div>` : ''}
     </section>`;
   paintSky(m);
 }

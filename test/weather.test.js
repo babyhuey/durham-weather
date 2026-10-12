@@ -5,7 +5,7 @@ import {
   parseDuration, expandSeries, expandAmounts, buildDays, nextHour, hourStrip,
   currentConditions, nearestStation, sunElevation, skyGradient, skyCoverAt, precipWord,
   windMph, compass, notableGust, quarterHours, headline, airReport, aqiBand, uvBand,
-  stationDetails, minuteRing, sunsetOn,
+  stationDetails, minuteRing, sunsetOn, sunriseOn,
 } from '../public/weather.js';
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
@@ -262,4 +262,15 @@ test('sunsetOn matches published sunset times within two minutes', () => {
 
 test('sunsetOn returns null when the sun never sets', () => {
   assert.equal(sunsetOn(Date.parse('2026-06-21T12:00:00Z'), 80, 0, 'UTC'), null);
+});
+
+test('sunriseOn matches published sunrise times within two minutes', () => {
+  const near = (actual, expected) => assert.ok(Math.abs(actual - Date.parse(expected)) <= 2 * 60000, new Date(actual).toISOString());
+  // Open-Meteo lists Durham sunrise at 7:05 AM on Sep 24 and 7:18 AM on Oct 10 (EDT).
+  near(sunriseOn(NOW, 36.091, -78.902, TZ), '2026-09-24T11:05:00Z');
+  near(sunriseOn(Date.parse('2026-10-11T03:30:00Z'), 36.091, -78.902, TZ), '2026-10-10T11:18:00Z');
+});
+
+test('sunriseOn returns null when the sun never rises', () => {
+  assert.equal(sunriseOn(Date.parse('2026-12-21T12:00:00Z'), 80, 0, 'UTC'), null);
 });
