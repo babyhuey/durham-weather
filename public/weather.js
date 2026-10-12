@@ -356,19 +356,22 @@ export function sunElevation(ms, lat, lon) {
   return Math.asin(Math.sin(la) * Math.sin(dec) + Math.cos(la) * Math.cos(dec) * Math.cos(ha)) / RAD;
 }
 
-// When the sun's upper edge drops below the horizon on the local calendar day of `ms`, or null if it doesn't.
-export function sunsetOn(ms, lat, lon, tz) {
+// When the sun's upper edge crosses the horizon, rising or setting, on the local calendar day of `ms`, or null if it doesn't.
+function horizonCrossing(ms, lat, lon, tz, rising) {
   const day = localDate(ms, tz);
   const up = (t) => sunElevation(t, lat, lon) > -0.833;
   const step = 10 * 60000;
   for (let t = ms - 24 * HOUR; t < ms + 24 * HOUR; t += step) {
-    if (!up(t) || up(t + step)) continue;
+    if (up(t) === rising || up(t + step) !== rising) continue;
     let [lo, hi] = [t, t + step];
-    while (hi - lo > 1000) { const mid = (lo + hi) / 2; if (up(mid)) lo = mid; else hi = mid; }
+    while (hi - lo > 1000) { const mid = (lo + hi) / 2; if (up(mid) === rising) hi = mid; else lo = mid; }
     if (localDate(hi, tz) === day) return Math.round(hi);
   }
   return null;
 }
+
+export const sunriseOn = (ms, lat, lon, tz) => horizonCrossing(ms, lat, lon, tz, true);
+export const sunsetOn = (ms, lat, lon, tz) => horizonCrossing(ms, lat, lon, tz, false);
 
 const SKIES = {
   day: { clear: ['#2a78d2', '#8ec6f3'], overcast: ['#56697f', '#aebacb'] },

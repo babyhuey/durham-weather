@@ -247,3 +247,8 @@ export function iconSVG(kind, { hero = false, label = '' } = {}) {
   const a11y = label ? `role="img" aria-label="${label.replace(/"/g, '&quot;')}"` : 'aria-hidden="true"';
   return `<svg class="wx${hero ? '' : ' wx-static'}" viewBox="0 0 120 120" ${a11y}><defs><radialGradient id="wx-sheen" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>${art}</svg>`;
 }
+
+export function sunIcon(rising) {
+  const arrow = rising ? 'M12 8V3m-2.5 2.5L12 3l2.5 2.5' : 'M12 3v5m-2.5-2.5L12 8l2.5-2.5';
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 17a6 6 0 0 1 12 0z" fill="#f5c451"/><path d="M2 17h20${arrow}M4.2 10.2l1.4 1.4M19.8 10.2l-1.4 1.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
