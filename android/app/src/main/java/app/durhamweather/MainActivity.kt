@@ -207,7 +207,10 @@ class MainActivity : ComponentActivity() {
         // "@other.host/" would load another site with the DurhamApp location bridge attached.
         private val PATHS = setOf("/today", "/radar")
 
-        private fun pathFrom(intent: Intent) = intent.getStringExtra(EXTRA_PATH)?.takeIf { it in PATHS }
+        const val EXTRA_ALERTS = "alerts"
+
+        private fun pathFrom(intent: Intent) =
+            alertsPath(intent.getStringArrayExtra(EXTRA_ALERTS)) ?: intent.getStringExtra(EXTRA_PATH)?.takeIf { it in PATHS }
     }
 
     override fun onDestroy() {

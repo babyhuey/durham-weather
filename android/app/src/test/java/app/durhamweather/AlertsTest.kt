@@ -77,4 +77,17 @@ class AlertsTest {
         assertNull(rainStart(q(0.0, 0.0, 0.0, 0.0, 0.0, 2.0)))
         assertNull(rainStart(emptyList()))
     }
+
+    @Test
+    fun alertsPathLinksEachAlert() {
+        assertEquals("/alerts?id=$advisory&id=$warning", alertsPath(arrayOf(advisory, warning)))
+    }
+
+    @Test
+    fun alertsPathRejectsAnythingButAlertIds() {
+        assertNull(alertsPath(null))
+        assertNull(alertsPath(emptyArray()))
+        assertNull(alertsPath(arrayOf(advisory, "x&id=@evil.example/")))
+        assertNull(alertsPath(arrayOf("urn:oid:2.49/../../today")))
+    }
 }

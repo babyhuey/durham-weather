@@ -73,6 +73,13 @@ fun rainStart(quarters: List<Quarter>): Long? {
     return quarters.drop(1).take(4).firstOrNull { it.mm >= RAIN_MM }?.start
 }
 
+private val ALERT_ID = Regex("urn:oid:[0-9a-f.]+")
+
+// Page showing these NWS alerts, or null when any id isn't an NWS alert id: MainActivity is exported,
+// so the ids may come from another app and must not be able to change the URL's shape.
+fun alertsPath(ids: Array<String>?): String? =
+    ids?.takeIf { it.isNotEmpty() && it.all(ALERT_ID::matches) }?.joinToString("&", "/alerts?") { "id=$it" }
+
 object Alerts {
     fun createChannels(ctx: Context) {
         val nm = ctx.getSystemService(NotificationManager::class.java)
@@ -147,7 +154,7 @@ object Alerts {
             .setContentTitle(a.event)
             .setContentText(a.headline)
             .setStyle(NotificationCompat.BigTextStyle().bigText(listOf(a.headline, a.description).filter { it.isNotBlank() }.joinToString("\n\n")))
-            .setContentIntent(open(ctx, 1, "/today"))
+            .setContentIntent(openAlerts(ctx, a.id.hashCode(), listOf(a.id)))
             .setTimeoutAfter((a.expires - System.currentTimeMillis()).coerceAtLeast(60_000))
             .setGroup(ALERTS_GROUP)
             .setAutoCancel(true)
@@ -163,7 +170,7 @@ object Alerts {
             .setSmallIcon(R.drawable.wx_storm)
             .setContentTitle("Weather alerts")
             .setContentText(latest.joinToString(", ") { it.event })
-            .setContentIntent(open(ctx, 1, "/today"))
+            .setContentIntent(openAlerts(ctx, 1, latest.map { it.id }))
             .setTimeoutAfter((expires - System.currentTimeMillis()).coerceAtLeast(60_000))
             .setGroup(ALERTS_GROUP)
             .setGroupSummary(true)
@@ -174,10 +181,17 @@ object Alerts {
         NotificationManagerCompat.from(ctx).notify(ALERTS_GROUP, 0, n)
     }
 
+    private fun open(ctx: Context, code: Int, path: String) = open(ctx, code) { putExtra(MainActivity.EXTRA_PATH, path) }
+
+    // Extras don't make PendingIntents distinct, so each alert needs its own request code or every
+    // alert's tap would open the one posted last.
+    private fun openAlerts(ctx: Context, code: Int, ids: List<String>) =
+        open(ctx, code) { putExtra(MainActivity.EXTRA_ALERTS, ids.toTypedArray()) }
+
     // Request codes differ from the widget's 0 so these PendingIntents don't replace its tap target.
-    private fun open(ctx: Context, code: Int, path: String) = PendingIntent.getActivity(
+    private fun open(ctx: Context, code: Int, extras: Intent.() -> Unit) = PendingIntent.getActivity(
         ctx, code,
-        Intent(ctx, MainActivity::class.java).putExtra(MainActivity.EXTRA_PATH, path).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        Intent(ctx, MainActivity::class.java).apply(extras).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 }
