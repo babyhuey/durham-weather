@@ -396,3 +396,7 @@ export function skyGradient(elevation, cover) {
   else pair = twilight.map((col, i) => mixHex(col, day[i], clamp01((elevation + 2) / 10)));
   return { top: pair[0], bottom: pair[1], night: elevation < -6 };
 }
+
+// NWS hard-wraps alert text near 70 columns; only blank lines separate paragraphs.
+export const alertParagraphs = (text) => String(text ?? '').split(/\n\s*\n/)
+  .map((p) => p.replace(/\s*\n\s*/g, ' ').trim()).filter(Boolean);

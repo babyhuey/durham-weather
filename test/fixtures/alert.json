@@ -1,0 +1,110 @@
+{
+  "@context": [
+    "https://geojson.org/geojson-ld/geojson-context.jsonld",
+    {
+      "@version": "1.1",
+      "wx": "https://api.weather.gov/ontology#",
+      "@vocab": "https://api.weather.gov/ontology#"
+    }
+  ],
+  "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.de697cf81456524e31dff21458e4bbfa0a9c0e36.001.1",
+  "type": "Feature",
+  "properties": {
+    "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.de697cf81456524e31dff21458e4bbfa0a9c0e36.001.1",
+    "@type": "wx:Alert",
+    "id": "urn:oid:2.49.0.1.840.0.de697cf81456524e31dff21458e4bbfa0a9c0e36.001.1",
+    "areaDesc": "Granville; Vance; Warren; Halifax; Durham; Franklin; Nash; Edgecombe; Wake; Johnston; Wilson",
+    "geocode": {
+      "SAME": [
+        "037077",
+        "037181",
+        "037185",
+        "037083",
+        "037063",
+        "037069",
+        "037127",
+        "037065",
+        "037183",
+        "037101",
+        "037195"
+      ],
+      "UGC": [
+        "NCZ008",
+        "NCZ009",
+        "NCZ010",
+        "NCZ011",
+        "NCZ025",
+        "NCZ026",
+        "NCZ027",
+        "NCZ028",
+        "NCZ041",
+        "NCZ042",
+        "NCZ043"
+      ]
+    },
+    "affectedZones": [
+      "https://api.weather.gov/zones/forecast/NCZ008",
+      "https://api.weather.gov/zones/forecast/NCZ009",
+      "https://api.weather.gov/zones/forecast/NCZ010",
+      "https://api.weather.gov/zones/forecast/NCZ011",
+      "https://api.weather.gov/zones/forecast/NCZ025",
+      "https://api.weather.gov/zones/forecast/NCZ026",
+      "https://api.weather.gov/zones/forecast/NCZ027",
+      "https://api.weather.gov/zones/forecast/NCZ028",
+      "https://api.weather.gov/zones/forecast/NCZ041",
+      "https://api.weather.gov/zones/forecast/NCZ042",
+      "https://api.weather.gov/zones/forecast/NCZ043"
+    ],
+    "references": [],
+    "sent": "2026-10-28T06:05:00-04:00",
+    "effective": "2026-10-28T06:05:00-04:00",
+    "onset": "2026-10-28T06:05:00-04:00",
+    "expires": "2026-10-28T09:00:00-04:00",
+    "ends": null,
+    "status": "Actual",
+    "messageType": "Alert",
+    "category": "Met",
+    "severity": "Moderate",
+    "certainty": "Observed",
+    "urgency": "Expected",
+    "event": "Special Weather Statement",
+    "sender": "w-nws.webmaster@noaa.gov",
+    "senderName": "NWS Raleigh NC",
+    "headline": "Special Weather Statement issued October 28 at 6:05AM EDT by NWS Raleigh NC",
+    "description": "Patchy fog has developed this morning across portions of the\nnortheast Piedmont as well as the Coastal Plain. Visibilities will\nbe locally reduced to one half mile at times through 9 AM.",
+    "instruction": null,
+    "response": "Execute",
+    "note": null,
+    "parameters": {
+      "AWIPSidentifier": [
+        "SPSRAH"
+      ],
+      "WMOidentifier": [
+        "WWUS82 KRAH 281005"
+      ],
+      "NWSheadline": [
+        "PATCHY FOG THIS MORNING"
+      ],
+      "BLOCKCHANNEL": [
+        "EAS",
+        "NWEM",
+        "CMAS"
+      ],
+      "EAS-ORG": [
+        "WXR"
+      ]
+    },
+    "scope": "Public",
+    "code": "IPAWSv1.0",
+    "language": "en-US",
+    "web": "http://www.weather.gov",
+    "eventCode": {
+      "SAME": [
+        "SPS"
+      ],
+      "NationalWeatherService": [
+        "SPS"
+      ]
+    }
+  }
+}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weather alert</title>
+<meta name="theme-color" content="#0f1622">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #0f1622;
+    --panel: rgba(255, 255, 255, 0.06);
+    --edge: rgba(255, 255, 255, 0.12);
+    --ink: #eef3fa;
+    --ink-soft: rgba(238, 243, 250, 0.68);
+    --warn: #f5c451;
+    --body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45;
+    padding-inline: max(16px, env(safe-area-inset-left, 0px));
+    padding-block: calc(20px + env(safe-area-inset-top, 0px)) calc(28px + env(safe-area-inset-bottom, 0px));
+  }
+  a { color: inherit; }
+  a:focus-visible { outline: 2px solid var(--warn); outline-offset: 3px; }
+  .topbar, .app { max-width: 560px; margin: 0 auto; }
+  .topbar { margin-bottom: 14px; }
+  .back { font-weight: 600; text-decoration: none; }
+  .app { display: grid; gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--edge); border-left: 4px solid var(--warn); border-radius: 16px; padding: 16px; }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  .meta { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
+  .card p:not(.meta) { margin: 12px 0 0; text-wrap: pretty; }
+  h2 { margin: 16px 0 0; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft); }
+  h2 + p { margin-top: 6px !important; }
+  .ended { color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="topbar"><a class="back" href="today">← Today</a></div>
+<main class="app" id="app" aria-live="polite">
+  <div class="card"><p class="meta">Loading alert…</p></div>
+</main>
+<script type="module" src="alerts.js"></script>
+</body>
+</html>

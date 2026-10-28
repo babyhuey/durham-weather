@@ -5,7 +5,7 @@ import {
   parseDuration, expandSeries, expandAmounts, buildDays, nextHour, hourStrip,
   currentConditions, nearestStation, sunElevation, skyGradient, skyCoverAt, precipWord,
   windMph, compass, notableGust, quarterHours, headline, airReport, aqiBand, uvBand,
-  stationDetails, minuteRing, sunsetOn, sunriseOn,
+  stationDetails, minuteRing, sunsetOn, sunriseOn, alertParagraphs,
 } from '../public/weather.js';
 
 const load = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}.json`, import.meta.url)));
@@ -273,4 +273,13 @@ test('sunriseOn matches published sunrise times within two minutes', () => {
 
 test('sunriseOn returns null when the sun never rises', () => {
   assert.equal(sunriseOn(Date.parse('2026-12-21T12:00:00Z'), 80, 0, 'UTC'), null);
+});
+
+test('alertParagraphs unwraps NWS line breaks but keeps paragraphs', () => {
+  const alert = load('alert').properties;
+  assert.deepEqual(alertParagraphs(alert.description), [
+    'Patchy fog has developed this morning across portions of the northeast Piedmont as well as the Coastal Plain. Visibilities will be locally reduced to one half mile at times through 9 AM.',
+  ]);
+  assert.deepEqual(alertParagraphs('* WHAT...Dense fog.\n\n* WHERE...Durham and\nOrange counties.\n'), ['* WHAT...Dense fog.', '* WHERE...Durham and Orange counties.']);
+  assert.deepEqual(alertParagraphs(null), []);
 });
